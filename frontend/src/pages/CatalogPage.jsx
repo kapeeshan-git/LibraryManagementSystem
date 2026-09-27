@@ -1,10 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Search, BookCheck, Bookmark, CheckCircle, Clock, MapPin, Tag, AlertCircle } from 'lucide-react';
+import { 
+  Search, 
+  BookCheck, 
+  Bookmark, 
+  CheckCircle, 
+  Clock, 
+  MapPin, 
+  Tag, 
+  AlertCircle,
+  BookOpen,
+  FileText,
+  Repeat,
+  QrCode,
+  Sparkles,
+  Info
+} from 'lucide-react';
 
 export default function CatalogPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isStaff } = useAuth();
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
@@ -52,7 +68,7 @@ export default function CatalogPage() {
 
   const handlePlaceHold = async (bookId) => {
     if (!isAuthenticated) {
-      alert('Please sign in to place a book hold or join the reservation queue.');
+      alert('Please sign in to place a book hold or join the reservation waitlist.');
       return;
     }
     setActionLoading(true);
@@ -63,8 +79,8 @@ export default function CatalogPage() {
       setReservationMessage({
         type: 'success',
         text: res.data.status === 'READY_FOR_PICKUP'
-          ? `Hold Placed! A copy is set aside for you at the library desk for 48 hours.`
-          : `Reserved! You are position #${res.data.queue_position} in the queue.`
+          ? `Hold Placed! A copy has been set aside at the library desk for 48 hours.`
+          : `Reserved! You are in position #${res.data.queue_position} in line.`
       });
       fetchBooks();
     } catch (err) {
@@ -78,163 +94,262 @@ export default function CatalogPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-8 mb-8 text-white shadow-xl">
-        <h1 className="text-3xl font-extrabold tracking-tight mb-2">University OPAC Catalog</h1>
-        <p className="text-emerald-100 max-w-2xl text-sm leading-relaxed">
-          Search physical library collections, check real-time shelf availability, and place pickup holds or join loan waiting queues.
-        </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+      {/* Notice Banner (Inspired by lib.cmb.ac.lk & vau.ac.lk) */}
+      <div className="bg-[#fff9e6] border-l-4 border-[#ffcb00] p-3.5 rounded-xl shadow-xs flex items-center justify-between text-xs text-[#670047]">
+        <div className="flex items-center space-x-2">
+          <Info className="w-4 h-4 text-[#670047] shrink-0" />
+          <span className="font-semibold">
+            <strong>Library Notice:</strong> Physical checkouts require your Student/Staff University ID Card QR. View your digital QR card from your dashboard.
+          </span>
+        </div>
+        <span className="hidden md:inline font-mono font-bold text-[11px] bg-[#670047] text-[#ffcb00] px-2 py-0.5 rounded">
+          Term 2 Circulation Active
+        </span>
+      </div>
 
-        {/* Search bar */}
-        <form onSubmit={handleSearchSubmit} className="mt-6 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-3.5 h-5 w-5 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title, author, ISBN, or subject..."
-              className="w-full pl-11 pr-4 py-3 rounded-xl bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-md"
-            />
+      {/* Hero OPAC Search Section with UoV Colors */}
+      <div className="bg-gradient-to-br from-[#670047] via-[#4b0150] to-[#1b3058] rounded-3xl p-8 sm:p-10 text-white shadow-xl relative overflow-hidden">
+        {/* Subtle decorative crest watermark */}
+        <div className="absolute right-4 -bottom-6 opacity-10 pointer-events-none">
+          <img src="/uov_logo.png" alt="" className="w-72 h-auto" />
+        </div>
+
+        <div className="relative z-10 max-w-3xl">
+          <div className="inline-flex items-center space-x-2 bg-[#ffcb00]/20 border border-[#ffcb00]/40 text-[#ffcb00] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Online Public Access Catalog (OPAC)</span>
           </div>
-          <button
-            type="submit"
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition shadow-md flex items-center justify-center space-x-2 text-sm"
-          >
-            <span>Search Catalog</span>
-          </button>
-        </form>
 
-        {/* Filter controls */}
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-medium text-emerald-100">
-          <div className="flex items-center space-x-2">
-            <span>Category:</span>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-slate-800/80 border border-emerald-500/30 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-400"
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
+            Discover Library Collections & Research
+          </h1>
+          <p className="text-slate-200 text-xs sm:text-sm mt-2 leading-relaxed max-w-2xl">
+            Search physical books across Pambaimadu Campus, verify real-time shelf status, place desk pickup holds, and access faculty pre-prints.
+          </p>
+
+          {/* Search Bar */}
+          <form onSubmit={handleSearchSubmit} className="mt-6 flex flex-col sm:flex-row gap-2.5">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by Title, Author, ISBN, Subject, or Shelf..."
+                className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white text-slate-900 placeholder-slate-400 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-[#ffcb00]/50 shadow-lg"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-[#ffcb00] hover:bg-[#e5b600] text-[#4b0150] font-black px-7 py-3.5 rounded-2xl transition shadow-lg flex items-center justify-center space-x-2 text-sm"
             >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
+              <span>Search Catalog</span>
+            </button>
+          </form>
 
-          <label className="flex items-center space-x-2 cursor-pointer bg-slate-800/60 px-3 py-1 rounded-lg border border-emerald-500/20 hover:bg-slate-800">
-            <input
-              type="checkbox"
-              checked={availableOnly}
-              onChange={(e) => setAvailableOnly(e.target.checked)}
-              className="rounded text-emerald-500 focus:ring-emerald-400"
-            />
-            <span>Available Copies Only</span>
-          </label>
+          {/* Filters Bar */}
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-200">
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold text-slate-300">Category:</span>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="bg-[#1b3058] border border-white/20 text-white rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#ffcb00]"
+              >
+                <option value="">All Academic Disciplines</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <label className="flex items-center space-x-2 cursor-pointer bg-white/10 px-3 py-1.5 rounded-xl border border-white/15 hover:bg-white/15 transition">
+              <input
+                type="checkbox"
+                checked={availableOnly}
+                onChange={(e) => setAvailableOnly(e.target.checked)}
+                className="rounded text-[#ffcb00] focus:ring-[#ffcb00]"
+              />
+              <span className="font-medium text-white">Available on Shelf Only</span>
+            </label>
+          </div>
         </div>
       </div>
 
-      {/* Book Grid */}
-      {loading ? (
-        <div className="text-center py-20">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent"></div>
-          <p className="mt-2 text-sm text-slate-500">Searching catalog collection...</p>
+      {/* Quick Services Grid (Reference from lib.cmb.ac.lk & vau.ac.lk) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Link
+          to="/repository"
+          className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-[#670047] shadow-xs hover:shadow-md transition group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-[#670047]/10 text-[#670047] flex items-center justify-center mb-3 group-hover:bg-[#670047] group-hover:text-white transition">
+            <FileText className="w-5 h-5" />
+          </div>
+          <h3 className="text-xs font-bold text-slate-900 group-hover:text-[#670047] transition">Institutional Repository</h3>
+          <p className="text-[11px] text-slate-500 mt-1">Lecturer research papers & faculty journals</p>
+        </Link>
+
+        <Link
+          to={isAuthenticated ? "/dashboard" : "/login"}
+          className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-[#670047] shadow-xs hover:shadow-md transition group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-[#ffcb00]/20 text-[#670047] flex items-center justify-center mb-3 group-hover:bg-[#ffcb00] transition">
+            <QrCode className="w-5 h-5" />
+          </div>
+          <h3 className="text-xs font-bold text-slate-900 group-hover:text-[#670047] transition">Digital Patron ID Card</h3>
+          <p className="text-[11px] text-slate-500 mt-1">Mobile QR card for book checkouts</p>
+        </Link>
+
+        {isStaff ? (
+          <Link
+            to="/circulation"
+            className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-[#670047] shadow-xs hover:shadow-md transition group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#1b3058]/10 text-[#1b3058] flex items-center justify-center mb-3 group-hover:bg-[#1b3058] group-hover:text-white transition">
+              <Repeat className="w-5 h-5" />
+            </div>
+            <h3 className="text-xs font-bold text-slate-900 group-hover:text-[#670047] transition">Circulation Desk</h3>
+            <p className="text-[11px] text-slate-500 mt-1">Barcode & ID scan for issues/returns</p>
+          </Link>
+        ) : (
+          <Link
+            to={isAuthenticated ? "/dashboard" : "/login"}
+            className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-[#670047] shadow-xs hover:shadow-md transition group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#1b3058]/10 text-[#1b3058] flex items-center justify-center mb-3 group-hover:bg-[#1b3058] group-hover:text-white transition">
+              <Clock className="w-5 h-5" />
+            </div>
+            <h3 className="text-xs font-bold text-slate-900 group-hover:text-[#670047] transition">Loan Renewals</h3>
+            <p className="text-[11px] text-slate-500 mt-1">Extend borrowing periods online</p>
+          </Link>
+        )}
+
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="text-[10px] uppercase font-bold text-[#670047] tracking-wider">Main Library Hours</div>
+            <div className="text-xs font-bold text-slate-800 mt-1">Monday – Friday: 8:00 AM – 6:00 PM</div>
+            <div className="text-[11px] text-slate-500">Saturday: 8:30 AM – 4:30 PM</div>
+          </div>
+          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded w-max mt-2 border border-emerald-200">
+            Open for Academic Year
+          </span>
         </div>
-      ) : books.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
-          <p className="text-slate-500 text-base">No books found matching your search criteria.</p>
+      </div>
+
+      {/* Book Collection Grid */}
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-lg font-black text-slate-900 tracking-tight">University Library Holdings</h2>
+            <p className="text-xs text-slate-500">Showing catalog results for University of Vavuniya collections</p>
+          </div>
+          <span className="text-xs font-bold text-[#670047] bg-[#fff0f7] px-3 py-1 rounded-full border border-[#ffb3d9]">
+            {books.length} Books Found
+          </span>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {books.map((book) => {
-            const isAvailable = book.available_copies_count > 0;
-            return (
-              <div
-                key={book.id}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between"
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      {book.category_name || 'General'}
-                    </span>
-                    <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        isAvailable
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {isAvailable ? `${book.available_copies_count} Available` : 'All On Loan'}
-                    </span>
-                  </div>
 
-                  <h3 className="text-base font-bold text-slate-900 leading-snug hover:text-emerald-700 transition">
-                    {book.title}
-                  </h3>
-
-                  <p className="text-xs text-slate-600 mt-1">
-                    By {book.authors?.map(a => a.name).join(', ') || 'Unknown Author'}
-                  </p>
-
-                  <div className="mt-4 space-y-1.5 text-xs text-slate-500">
-                    <div className="flex items-center space-x-1.5">
-                      <Tag className="w-3.5 h-3.5 text-slate-400" />
-                      <span>ISBN: <strong className="text-slate-700">{book.isbn}</strong></span>
+        {loading ? (
+          <div className="text-center py-20">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#670047] border-t-transparent"></div>
+            <p className="mt-2 text-xs text-slate-500 font-medium">Searching university library database...</p>
+          </div>
+        ) : books.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
+            <p className="text-slate-500 text-xs">No catalog titles found matching your search.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {books.map((book) => {
+              const isAvailable = book.available_copies_count > 0;
+              return (
+                <div
+                  key={book.id}
+                  className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between hover:border-[#670047]/40"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-3 mb-2.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#670047] bg-[#fff0f7] px-2.5 py-0.5 rounded-md border border-[#ffb3d9]">
+                        {book.category_name || 'Academic'}
+                      </span>
+                      <span
+                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                          isAvailable
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-800 border border-amber-200'
+                        }`}
+                      >
+                        {isAvailable ? `${book.available_copies_count} on Shelf` : 'All Loaned'}
+                      </span>
                     </div>
-                    {book.shelf_location && (
+
+                    <h3 className="text-base font-black text-slate-900 leading-snug hover:text-[#670047] transition">
+                      {book.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-600 mt-1 font-medium">
+                      By {book.authors?.map(a => a.name).join(', ') || 'Faculty / Author'}
+                    </p>
+
+                    <div className="mt-4 space-y-1.5 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
                       <div className="flex items-center space-x-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Shelf: <strong className="text-slate-700">{book.shelf_location}</strong></span>
+                        <Tag className="w-3.5 h-3.5 text-slate-400" />
+                        <span>ISBN: <strong className="font-mono text-slate-800">{book.isbn}</strong></span>
                       </div>
+                      {book.shelf_location && (
+                        <div className="flex items-center space-x-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Location: <strong className="text-slate-800">{book.shelf_location}</strong></span>
+                        </div>
+                      )}
+                    </div>
+
+                    {book.description && (
+                      <p className="mt-3 text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                        {book.description}
+                      </p>
                     )}
                   </div>
 
-                  {book.description && (
-                    <p className="mt-3 text-xs text-slate-600 line-clamp-2">
-                      {book.description}
-                    </p>
-                  )}
-                </div>
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                    <button
+                      onClick={() => {
+                        setSelectedBook(book);
+                        setReservationMessage({ text: '', type: '' });
+                      }}
+                      className="text-xs font-bold text-[#670047] hover:underline"
+                    >
+                      Copies ({book.total_copies_count})
+                    </button>
 
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                  <button
-                    onClick={() => {
-                      setSelectedBook(book);
-                      setReservationMessage({ text: '', type: '' });
-                    }}
-                    className="text-xs font-bold text-slate-700 hover:text-emerald-700 underline"
-                  >
-                    View Copies ({book.total_copies_count})
-                  </button>
-
-                  <button
-                    onClick={() => handlePlaceHold(book.id)}
-                    disabled={actionLoading}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center space-x-1 transition shadow-sm ${
-                      isAvailable
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                        : 'bg-amber-600 hover:bg-amber-700 text-white'
-                    }`}
-                  >
-                    <Bookmark className="w-3.5 h-3.5" />
-                    <span>{isAvailable ? 'Hold for Pickup' : 'Join Waitlist'}</span>
-                  </button>
+                    <button
+                      onClick={() => handlePlaceHold(book.id)}
+                      disabled={actionLoading}
+                      className={`text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5 transition shadow-xs ${
+                        isAvailable
+                          ? 'bg-[#670047] hover:bg-[#4b0150] text-white'
+                          : 'bg-[#1b3058] hover:bg-[#121e36] text-white'
+                      }`}
+                    >
+                      <Bookmark className="w-3.5 h-3.5 text-[#ffcb00]" />
+                      <span>{isAvailable ? 'Hold for Pickup' : 'Join Queue'}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Book Copies Modal */}
       {selectedBook && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">{selectedBook.title}</h3>
-                <p className="text-xs text-slate-500">ISBN: {selectedBook.isbn} • Shelf: {selectedBook.shelf_location}</p>
+                <h3 className="text-base font-black text-slate-900">{selectedBook.title}</h3>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">ISBN: {selectedBook.isbn} • {selectedBook.shelf_location}</p>
               </div>
               <button
                 onClick={() => setSelectedBook(null)}
@@ -245,27 +360,27 @@ export default function CatalogPage() {
             </div>
 
             {reservationMessage.text && (
-              <div className={`p-3 rounded-lg text-xs font-medium mb-4 flex items-center space-x-2 ${
+              <div className={`p-3 rounded-xl text-xs font-bold mb-4 flex items-center space-x-2 ${
                 reservationMessage.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
               }`}>
-                {reservationMessage.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-600" />}
+                {reservationMessage.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
                 <span>{reservationMessage.text}</span>
               </div>
             )}
 
             <div className="mb-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-                Physical Holdings & Barcodes
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-600 mb-2">
+                Physical Holdings & Accession Barcodes
               </h4>
-              <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto border border-slate-200 rounded-lg">
+              <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
                 {selectedBook.copies && selectedBook.copies.length > 0 ? (
                   selectedBook.copies.map((copy) => (
                     <div key={copy.id} className="p-3 flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-mono font-bold text-slate-800">{copy.accession_number}</div>
+                        <div className="font-mono font-bold text-[#670047]">{copy.accession_number}</div>
                         <div className="text-slate-500 text-[11px]">Condition: {copy.condition_display}</div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
                         copy.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-800' :
                         copy.status === 'BORROWED' ? 'bg-amber-100 text-amber-800' :
                         copy.status === 'ON_HOLD' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'
@@ -275,24 +390,24 @@ export default function CatalogPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="p-4 text-center text-xs text-slate-500">No copies registered yet.</div>
+                  <div className="p-4 text-center text-xs text-slate-500">No physical copies registered yet.</div>
                 )}
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end space-x-2 pt-2">
               <button
                 onClick={() => setSelectedBook(null)}
-                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200"
               >
                 Close
               </button>
               <button
                 onClick={() => handlePlaceHold(selectedBook.id)}
                 disabled={actionLoading}
-                className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 shadow"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#670047] hover:bg-[#4b0150] shadow"
               >
-                {selectedBook.available_copies_count > 0 ? 'Hold Available Copy' : 'Join Wait Queue'}
+                {selectedBook.available_copies_count > 0 ? 'Place Desk Hold' : 'Join Waitlist'}
               </button>
             </div>
           </div>

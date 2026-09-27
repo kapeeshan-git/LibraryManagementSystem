@@ -37,53 +37,59 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
+      <div className="max-w-md w-full space-y-6 bg-white p-8 sm:p-10 rounded-3xl shadow-xl border-t-4 border-[#670047] border-x border-b border-slate-200">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center shadow-inner mb-4">
-            <BookMarked className="w-9 h-9" />
-          </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          <img 
+            src="/uov_logo.png" 
+            alt="University of Vavuniya Crest" 
+            className="h-16 w-auto mx-auto object-contain drop-shadow mb-3"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://www.vau.ac.lk/wp-content/uploads/2021/07/cropped-UoV_Logo.png';
+            }}
+          />
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">
             Patron & Staff Login
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            University of Vavuniya Library Portal
+          <p className="mt-0.5 text-xs text-[#670047] font-bold">
+            University of Vavuniya Library Management System
           </p>
         </div>
 
         {error && (
-          <div className="bg-rose-50 border-l-4 border-rose-500 p-4 rounded-md flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-rose-700 font-medium">{error}</p>
+          <div className="bg-rose-50 border-l-4 border-rose-500 p-3.5 rounded-lg flex items-start space-x-3">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-rose-700 font-bold">{error}</p>
           </div>
         )}
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+        <form className="mt-4 space-y-4 text-xs" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
               Registration No / Staff ID
             </label>
-            <div className="relative rounded-md shadow-sm">
+            <div className="relative rounded-md shadow-xs">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="h-5 w-5 text-slate-400" />
+                <User className="h-4 w-4 text-slate-400" />
               </div>
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. 2022/ICT/125 or admin"
-                className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50/50"
+                placeholder="e.g. 2022/ICT/125 or librarian"
+                className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#670047] bg-slate-50/50"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
               Password
             </label>
-            <div className="relative rounded-md shadow-sm">
+            <div className="relative rounded-md shadow-xs">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <KeyRound className="h-5 w-5 text-slate-400" />
+                <KeyRound className="h-4 w-4 text-slate-400" />
               </div>
               <input
                 type="password"
@@ -91,7 +97,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-50/50"
+                className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#670047] bg-slate-50/50"
               />
             </div>
           </div>
@@ -99,53 +105,53 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition disabled:opacity-50"
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-xs font-black text-white bg-[#670047] hover:bg-[#4b0150] focus:outline-none focus:ring-2 focus:ring-[#ffcb00] transition disabled:opacity-50"
           >
             {loading ? 'Authenticating...' : 'Sign In to Library'}
           </button>
         </form>
 
         {/* Quick Demo Credentials */}
-        <div className="pt-6 border-t border-slate-100">
-          <div className="flex items-center space-x-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Quick Test Accounts</span>
+        <div className="pt-4 border-t border-slate-100">
+          <div className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2.5">
+            <Sparkles className="w-3 h-3 text-[#ffcb00]" />
+            <span>Fast Role Testing Accounts</span>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               type="button"
               onClick={() => handleQuickLogin('librarian', 'Librarian@123')}
-              className="p-2 border border-slate-200 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-left transition"
+              className="p-2 border border-slate-200 rounded-xl bg-slate-50 hover:bg-[#fff0f7] hover:border-[#670047]/40 text-left transition"
             >
-              <div className="font-bold text-slate-800">Librarian</div>
-              <div className="text-slate-500 text-[11px]">librarian / Librarian@123</div>
+              <div className="font-black text-slate-800">Librarian</div>
+              <div className="text-slate-500 text-[10px]">librarian / Librarian@123</div>
             </button>
 
             <button
               type="button"
               onClick={() => handleQuickLogin('admin', 'Admin@123')}
-              className="p-2 border border-slate-200 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-left transition"
+              className="p-2 border border-slate-200 rounded-xl bg-slate-50 hover:bg-[#fff0f7] hover:border-[#670047]/40 text-left transition"
             >
-              <div className="font-bold text-slate-800">Admin</div>
-              <div className="text-slate-500 text-[11px]">admin / Admin@123</div>
+              <div className="font-black text-slate-800">Admin</div>
+              <div className="text-slate-500 text-[10px]">admin / Admin@123</div>
             </button>
 
             <button
               type="button"
               onClick={() => handleQuickLogin('lecturer', 'Lecturer@123')}
-              className="p-2 border border-slate-200 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-left transition"
+              className="p-2 border border-slate-200 rounded-xl bg-slate-50 hover:bg-[#fff0f7] hover:border-[#670047]/40 text-left transition"
             >
-              <div className="font-bold text-slate-800">Lecturer</div>
-              <div className="text-slate-500 text-[11px]">lecturer / Lecturer@123</div>
+              <div className="font-black text-slate-800">Lecturer</div>
+              <div className="text-slate-500 text-[10px]">lecturer / Lecturer@123</div>
             </button>
 
             <button
               type="button"
               onClick={() => handleQuickLogin('2022/ICT/125', 'Password@123')}
-              className="p-2 border border-slate-200 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 text-left transition"
+              className="p-2 border border-slate-200 rounded-xl bg-slate-50 hover:bg-[#fff0f7] hover:border-[#670047]/40 text-left transition"
             >
-              <div className="font-bold text-slate-800">Student (Kapeeshan)</div>
-              <div className="text-slate-500 text-[11px]">2022/ICT/125 / Password@123</div>
+              <div className="font-black text-slate-800">Student (Kapeeshan)</div>
+              <div className="text-slate-500 text-[10px]">2022/ICT/125 / Password@123</div>
             </button>
           </div>
         </div>

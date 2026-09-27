@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { 
+  Home,
   BookOpen, 
   FileText, 
   Repeat, 
@@ -16,8 +17,11 @@ import {
   ExternalLink,
   Clock,
   MapPin,
-  Library,
-  ShieldCheck
+  Globe,
+  GraduationCap,
+  Bookmark,
+  Info,
+  Sparkles
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -41,11 +45,16 @@ export default function Navbar() {
   };
 
   const navLinks = [
+    { name: 'Home', path: '/', icon: Home, public: true },
+    { name: 'About', path: '/about', icon: Info, public: true },
     { name: 'Catalog (OPAC)', path: '/catalog', icon: BookOpen, public: true },
-    { name: 'Institutional Repository', path: '/repository', icon: FileText, public: true },
+    { name: 'E-Books', path: '/ebooks', icon: Globe, public: true },
+    { name: 'Publications', path: '/publications', icon: GraduationCap, public: true },
+    { name: 'Services', path: '/services', icon: Bookmark, public: true },
+    { name: 'Repository', path: '/repository', icon: FileText, public: true },
     { name: 'Circulation Desk', path: '/circulation', icon: Repeat, staffOnly: true },
     { name: 'Administration', path: '/admin', icon: LayoutDashboard, staffOnly: true },
-    { name: 'My Loans & Holds', path: '/dashboard', icon: User, authOnly: true },
+    { name: 'My Loans', path: '/dashboard', icon: User, authOnly: true },
   ];
 
   const filteredLinks = navLinks.filter(link => {
@@ -64,7 +73,7 @@ export default function Navbar() {
           <div className="flex items-center justify-between gap-4">
             {/* Left: Official University Logo Banner & Portal Title */}
             <div className="flex items-center space-x-4">
-              <Link to="/catalog" className="flex items-center space-x-3 group">
+              <Link to="/" className="flex items-center space-x-3 group">
                 <img 
                   src="/cropped-UoV_Logo.png" 
                   alt="University of Vavuniya | வவுனியா பல்கலைக்கழகம் | වවුනියා විශ්වවිද්‍යාලය" 
@@ -92,35 +101,47 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Right: Institutional Utility Links (Matching vau.ac.lk top navigation) */}
-            <div className="hidden md:flex items-center space-x-5 text-xs">
-              <div className="flex items-center space-x-1.5 text-slate-600 font-medium">
+            {/* Right: Institutional Utility Links (Matching vau.ac.lk & lib.cmb.ac.lk top navigation) */}
+            <div className="hidden md:flex items-center space-x-4 text-xs">
+              <div className="flex items-center space-x-1 text-slate-600 font-medium">
                 <MapPin className="w-3.5 h-3.5 text-[#670047]" />
                 <span>Pambaimadu Campus</span>
               </div>
 
-              <div className="flex items-center space-x-1.5 text-slate-600 font-medium">
+              <div className="flex items-center space-x-1 text-slate-600 font-medium">
                 <Clock className="w-3.5 h-3.5 text-[#670047]" />
-                <span>8:00 AM – 6:00 PM</span>
+                <span>8:00 AM – 8:00 PM</span>
               </div>
+
+              <Link
+                to="/about"
+                className="text-slate-600 hover:text-[#670047] font-semibold transition"
+              >
+                About Library
+              </Link>
+
+              <Link
+                to="/services"
+                className="text-slate-600 hover:text-[#670047] font-semibold transition"
+              >
+                Services
+              </Link>
+
+              <Link
+                to="/ebooks"
+                className="text-slate-600 hover:text-[#670047] font-semibold transition"
+              >
+                E-Books
+              </Link>
 
               <a 
                 href="https://vau.ac.lk/" 
                 target="_blank" 
                 rel="noreferrer" 
-                className="text-[#670047] hover:text-[#520038] font-bold flex items-center space-x-1 transition"
+                className="text-[#670047] hover:text-[#520038] font-bold flex items-center space-x-1 transition pl-1"
               >
                 <span>vau.ac.lk</span>
                 <ExternalLink className="w-3 h-3" />
-              </a>
-
-              <a 
-                href="https://vau.ac.lk/library/" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="text-slate-600 hover:text-[#670047] font-semibold transition"
-              >
-                About Library
               </a>
             </div>
 
@@ -143,9 +164,9 @@ export default function Navbar() {
       {/* ============================================================== */}
       <nav className="bg-[#670047] text-white border-b-2 border-[#ffcb00]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-13">
             {/* Desktop Navigation Links */}
-            <div className="hidden lg:flex items-center space-x-1">
+            <div className="hidden lg:flex items-center space-x-0.5">
               {filteredLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = location.pathname === link.path;
@@ -153,13 +174,13 @@ export default function Navbar() {
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                    className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold transition ${
                       isActive
                         ? 'bg-[#4b0150] text-[#ffcb00] shadow-inner border-b-2 border-[#ffcb00]'
                         : 'text-slate-100 hover:bg-[#520038] hover:text-[#ffcb00]'
                     }`}
                   >
-                    <Icon className="w-4 h-4 text-[#ffcb00]" />
+                    <Icon className="w-3.5 h-3.5 text-[#ffcb00]" />
                     <span>{link.name}</span>
                   </Link>
                 );
@@ -167,9 +188,9 @@ export default function Navbar() {
             </div>
 
             {/* Right: Authenticated Patron / Staff Profile Strip */}
-            <div className="hidden md:flex items-center space-x-3 ml-auto">
+            <div className="hidden md:flex items-center space-x-2.5 ml-auto">
               {isAuthenticated ? (
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2.5">
                   {/* Notification Bell */}
                   <Link 
                     to="/dashboard"
@@ -185,12 +206,12 @@ export default function Navbar() {
                   </Link>
 
                   {/* Patron / Staff Badge */}
-                  <div className="flex items-center space-x-2 bg-[#4b0150] py-1.5 px-3 rounded-xl border border-white/10 text-xs">
+                  <div className="flex items-center space-x-2 bg-[#4b0150] py-1 px-2.5 rounded-xl border border-white/10 text-xs">
                     <div className="w-6 h-6 rounded-full bg-[#ffcb00] text-slate-950 font-black flex items-center justify-center text-[10px]">
                       {user?.first_name ? user.first_name[0] : (user?.username ? user.username[0] : 'U')}
                     </div>
                     <div className="leading-tight">
-                      <div className="font-bold text-white truncate max-w-[130px]">
+                      <div className="font-bold text-white truncate max-w-[120px]">
                         {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.username}
                       </div>
                       <div className="text-[10px] text-[#ffcb00] font-mono font-bold">
@@ -202,7 +223,7 @@ export default function Navbar() {
                   {/* Logout Button */}
                   <button
                     onClick={handleLogout}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/60 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                    className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-900/60 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5 text-rose-300" />
                     <span>Logout</span>
@@ -211,7 +232,7 @@ export default function Navbar() {
               ) : (
                 <Link
                   to="/login"
-                  className="flex items-center space-x-1.5 bg-[#ffcb00] hover:bg-yellow-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-black shadow-md transition"
+                  className="flex items-center space-x-1.5 bg-[#ffcb00] hover:bg-yellow-400 text-slate-950 px-3.5 py-1.5 rounded-xl text-xs font-black shadow-md transition"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Patron Login</span>
@@ -221,40 +242,55 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#4b0150] px-4 pt-2 pb-4 space-y-1 border-t border-[#7a1e5c]">
-            {filteredLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2.5 rounded-xl text-xs font-bold text-slate-100 hover:bg-[#670047] hover:text-[#ffcb00]"
-              >
-                {link.name}
-              </Link>
-            ))}
-            <div className="pt-3 border-t border-[#7a1e5c]/60">
+          <div className="lg:hidden bg-[#520038] px-4 pt-3 pb-5 border-t border-[#ffcb00]/30 space-y-2">
+            <div className="grid grid-cols-1 gap-1">
+              {filteredLinks.map((link) => {
+                const Icon = link.icon;
+                const isActive = location.pathname === link.path;
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                      isActive
+                        ? 'bg-[#670047] text-[#ffcb00] border-l-4 border-[#ffcb00]'
+                        : 'text-slate-100 hover:bg-[#670047]'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 text-[#ffcb00]" />
+                    <span>{link.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
               {isAuthenticated ? (
-                <div className="flex items-center justify-between p-2 bg-[#670047] rounded-xl text-xs">
-                  <div>
-                    <div className="font-bold text-white">{user?.username} ({user?.role})</div>
-                    <div className="text-[11px] text-[#ffcb00] font-mono">{user?.reg_number}</div>
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <div className="text-slate-200">
+                    <span className="font-bold text-white">{user?.username}</span> ({user?.reg_number})
                   </div>
                   <button
-                    onClick={handleLogout}
-                    className="text-rose-200 hover:text-white text-xs font-bold px-3 py-1.5 bg-rose-900/80 rounded-lg transition"
+                    onClick={() => {
+                      handleLogout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="text-rose-300 hover:text-white font-bold flex items-center space-x-1"
                   >
-                    Logout
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Logout</span>
                   </button>
                 </div>
               ) : (
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-center bg-[#ffcb00] hover:bg-yellow-400 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs shadow-md"
+                  className="w-full text-center bg-[#ffcb00] text-slate-950 font-black py-2.5 rounded-xl text-xs"
                 >
-                  Patron Login
+                  Sign In to Patron Portal
                 </Link>
               )}
             </div>

@@ -1,7 +1,12 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
+import HomePage from './pages/HomePage';
+import AboutPage from './pages/AboutPage';
+import ServicesPage from './pages/ServicesPage';
+import EBooksPage from './pages/EBooksPage';
+import PublicationsPage from './pages/PublicationsPage';
 import CatalogPage from './pages/CatalogPage';
 import RepositoryPage from './pages/RepositoryPage';
 import LoginPage from './pages/LoginPage';
@@ -40,7 +45,16 @@ export default function App() {
           <Navbar />
           <main className="flex-1">
             <Routes>
-              <Route path="/" element={<Navigate to="/catalog" replace />} />
+              {/* Home & Information Portals */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/library_about" element={<AboutPage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route path="/library_services" element={<ServicesPage />} />
+              <Route path="/ebooks" element={<EBooksPage />} />
+              <Route path="/publications" element={<PublicationsPage />} />
+
+              {/* OPAC & Repository */}
               <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/repository" element={<RepositoryPage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -75,7 +89,8 @@ export default function App() {
                 }
               />
 
-              <Route path="*" element={<Navigate to="/catalog" replace />} />
+              {/* Fallback to Home */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
           
@@ -125,13 +140,15 @@ export default function App() {
                 {/* Col 3: Library Services */}
                 <div className="space-y-2">
                   <h4 className="text-white font-bold uppercase tracking-wider text-[11px] border-b border-slate-700 pb-1.5 text-[#ffcb00]">
-                    Library Collections
+                    Library Collections & Services
                   </h4>
                   <ul className="space-y-1.5 text-[11px] text-slate-400">
-                    <li><a href="/catalog" className="hover:text-white transition">OPAC Public Book Catalog</a></li>
-                    <li><a href="/repository" className="hover:text-white transition">Digital Institutional Repository</a></li>
-                    <li><a href="/dashboard" className="hover:text-white transition">Patron Loans & Due Date Alerts</a></li>
-                    <li><a href="https://scholar.google.com/citations?hl=en&view_op=search_authors&mauthors=%22vau.ac.lk%22" target="_blank" rel="noreferrer" className="hover:text-white transition">Staff in Google Scholar</a></li>
+                    <li><Link to="/about" className="hover:text-white transition">About Library & Hours</Link></li>
+                    <li><Link to="/catalog" className="hover:text-white transition">OPAC Public Book Catalog</Link></li>
+                    <li><Link to="/ebooks" className="hover:text-white transition">E-Books & Open Access</Link></li>
+                    <li><Link to="/publications" className="hover:text-white transition">Publications & Past Papers</Link></li>
+                    <li><Link to="/services" className="hover:text-white transition">Circulation & Reproduction Services</Link></li>
+                    <li><Link to="/repository" className="hover:text-white transition">Digital Institutional Repository</Link></li>
                   </ul>
                 </div>
 

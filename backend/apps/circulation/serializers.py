@@ -40,3 +40,19 @@ class ReturnBookSerializer(serializers.Serializer):
 
 class RenewBookSerializer(serializers.Serializer):
     borrow_record_id = serializers.IntegerField()
+
+
+class CirculationRuleSerializer(serializers.ModelSerializer):
+    patron_category_display = serializers.CharField(source='get_patron_category_display', read_only=True)
+    item_type_display = serializers.CharField(source='get_item_type_display', read_only=True)
+
+    class Meta:
+        from .models import CirculationRule
+        model = CirculationRule
+        fields = [
+            'id', 'patron_category', 'patron_category_display',
+            'item_type', 'item_type_display', 'max_checkouts',
+            'loan_period_days', 'fine_per_day_rs', 'grace_period_days',
+            'max_renewals', 'holds_allowed', 'description',
+            'created_at', 'updated_at'
+        ]

@@ -120,14 +120,16 @@ def seed():
             'category': cat_cs,
             'publisher': 'Pearson',
             'publication_year': 2014,
+            'call_number': '005.43 TAN 2014',
             'shelf_location': 'Rack CS-02, Shelf 1',
             'description': 'Comprehensive foundation of operating system concepts and architecture.'
         }
     )
     if created:
         book1.authors.add(auth_tanenbaum)
-        BookCopy.objects.create(book=book1, accession_number="BC-MOS-001", status=BookCopy.Status.AVAILABLE)
-        BookCopy.objects.create(book=book1, accession_number="BC-MOS-002", status=BookCopy.Status.AVAILABLE)
+        BookCopy.objects.create(book=book1, accession_number="BC-MOS-001", item_type=BookCopy.ItemType.STANDARD, status=BookCopy.Status.AVAILABLE)
+        BookCopy.objects.create(book=book1, accession_number="BC-MOS-002", item_type=BookCopy.ItemType.STANDARD, status=BookCopy.Status.AVAILABLE)
+        BookCopy.objects.create(book=book1, accession_number="BC-MOS-REF", item_type=BookCopy.ItemType.REFERENCE, status=BookCopy.Status.AVAILABLE, notes="Reference Stack - Not For Loan")
 
     book2, created = Book.objects.get_or_create(
         isbn="978-0078022159",
@@ -136,14 +138,15 @@ def seed():
             'category': cat_cs,
             'publisher': 'McGraw-Hill',
             'publication_year': 2019,
+            'call_number': '005.74 SIL 2019',
             'shelf_location': 'Rack CS-04, Shelf 3',
             'description': 'Fundamental database design, relational models, and query processing.'
         }
     )
     if created:
         book2.authors.add(auth_silber)
-        BookCopy.objects.create(book=book2, accession_number="BC-DBS-001", status=BookCopy.Status.AVAILABLE)
-        BookCopy.objects.create(book=book2, accession_number="BC-DBS-002", status=BookCopy.Status.AVAILABLE)
+        BookCopy.objects.create(book=book2, accession_number="BC-DBS-001", item_type=BookCopy.ItemType.STANDARD, status=BookCopy.Status.AVAILABLE)
+        BookCopy.objects.create(book=book2, accession_number="BC-DBS-002", item_type=BookCopy.ItemType.STANDARD, status=BookCopy.Status.AVAILABLE)
 
     book3, created = Book.objects.get_or_create(
         isbn="978-0134610993",
@@ -152,15 +155,45 @@ def seed():
             'category': cat_cs,
             'publisher': 'Pearson',
             'publication_year': 2020,
+            'call_number': '006.3 RUS 2020',
             'shelf_location': 'Rack AI-01, Shelf 2',
             'description': 'The standard textbook in artificial intelligence.'
         }
     )
     if created:
         book3.authors.add(auth_russell)
-        BookCopy.objects.create(book=book3, accession_number="BC-AIM-001", status=BookCopy.Status.AVAILABLE)
+        BookCopy.objects.create(book=book3, accession_number="BC-AIM-001", item_type=BookCopy.ItemType.STANDARD, status=BookCopy.Status.AVAILABLE)
+        BookCopy.objects.create(book=book3, accession_number="BC-AIM-RES", item_type=BookCopy.ItemType.RESERVE, status=BookCopy.Status.AVAILABLE, notes="Course Reserve - Short Loan (3 days)")
 
-    print("[+] Catalog books and physical copies seeded")
+    print("[+] Catalog books, call numbers, and physical copies seeded")
+
+    # 6. Koha Circulation & Fine Rules Matrix (smart-rules.pl)
+    from apps.circulation.models import CirculationRule
+    rules_data = [
+        # Patron Category, Item Type, Max Checkouts, Loan Days, Fine/Day, Grace Days, Max Renewals, Description
+        ('STUDENT', 'STANDARD', 2, 14, 10.00, 1, 1, 'Standard Undergraduate/Postgraduate student book lending'),
+        ('LECTURER', 'STANDARD', 5, 90, 5.00, 3, 2, 'Academic faculty semester-long teaching & research loans'),
+        ('*', 'RESERVE', 1, 3, 25.00, 0, 0, 'Course Reserves (High demand examination shelf - 3 day short loan)'),
+        ('*', 'REFERENCE', 0, 0, 50.00, 0, 0, 'Reference Collection (In-library consultation only, non-circulating)'),
+        ('*', '*', 2, 14, 10.00, 1, 1, 'Default Koha fallback rule'),
+    ]
+
+    for p_cat, i_type, max_c, l_days, fine, grace, max_r, desc in rules_data:
+        rule, _ = CirculationRule.objects.get_or_create(
+            patron_category=p_cat,
+            item_type=i_type,
+            defaults={
+                'max_checkouts': max_c,
+                'loan_period_days': l_days,
+                'fine_per_day_rs': fine,
+                'grace_period_days': grace,
+                'max_renewals': max_r,
+                'holds_allowed': (i_type != 'REFERENCE'),
+                'description': desc
+            }
+        )
+    print("[+] Koha Circulation & Fine Rules Matrix seeded")
+
     print("[SUCCESS] Database setup and seed completed successfully!")
 
 if __name__ == '__main__':

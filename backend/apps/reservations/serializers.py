@@ -5,6 +5,8 @@ from apps.catalog.serializers import BookSerializer, BookCopySerializer
 class ReservationSerializer(serializers.ModelSerializer):
     patron_name = serializers.ReadOnlyField(source='user.get_full_name')
     patron_reg_number = serializers.ReadOnlyField(source='user.reg_number')
+    patron_phone = serializers.ReadOnlyField(source='user.phone_number')
+    patron_email = serializers.ReadOnlyField(source='user.email')
     book_title = serializers.ReadOnlyField(source='book.title')
     book_isbn = serializers.ReadOnlyField(source='book.isbn')
     allocated_copy_barcode = serializers.ReadOnlyField(source='allocated_copy.accession_number')
@@ -14,8 +16,8 @@ class ReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
         fields = [
-            'id', 'user', 'patron_name', 'patron_reg_number', 'book',
-            'book_title', 'book_isbn', 'allocated_copy', 'allocated_copy_barcode',
+            'id', 'user', 'patron_name', 'patron_reg_number', 'patron_phone', 'patron_email',
+            'book', 'book_title', 'book_isbn', 'allocated_copy', 'allocated_copy_barcode',
             'queue_position', 'status', 'status_display', 'reserved_at',
             'hold_expires_at', 'is_expired'
         ]

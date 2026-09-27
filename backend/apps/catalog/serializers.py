@@ -20,13 +20,14 @@ class BookCopySerializer(serializers.ModelSerializer):
     book_isbn = serializers.ReadOnlyField(source='book.isbn')
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     condition_display = serializers.CharField(source='get_condition_display', read_only=True)
+    item_type_display = serializers.CharField(source='get_item_type_display', read_only=True)
 
     class Meta:
         model = BookCopy
         fields = [
             'id', 'book', 'book_title', 'book_isbn', 'accession_number',
-            'status', 'status_display', 'condition', 'condition_display',
-            'acquisition_date', 'notes'
+            'item_type', 'item_type_display', 'status', 'status_display',
+            'condition', 'condition_display', 'acquisition_date', 'notes'
         ]
 
 
@@ -49,7 +50,7 @@ class BookSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'isbn', 'authors', 'author_ids', 'category',
             'category_name', 'publisher', 'publication_year', 'edition',
-            'shelf_location', 'description', 'cover_image',
+            'call_number', 'shelf_location', 'description', 'cover_image',
             'available_copies_count', 'total_copies_count', 'copies',
             'created_at', 'updated_at'
         ]

@@ -34,6 +34,11 @@ class Book(models.Model):
     publication_year = models.PositiveIntegerField(null=True, blank=True)
     edition = models.CharField(max_length=50, blank=True)
     shelf_location = models.CharField(max_length=100, blank=True, help_text=_("e.g., Rack A-12, Shelf 3"))
+    call_number = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_("Koha / DDC Classification Call Number (e.g., 005.133 JAV 2023)")
+    )
     description = models.TextField(blank=True)
     cover_image = models.ImageField(upload_to='book_covers/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -68,12 +73,25 @@ class BookCopy(models.Model):
         FAIR = 'FAIR', _('Fair / Used')
         DAMAGED = 'DAMAGED', _('Damaged')
 
+    class ItemType(models.TextChoices):
+        STANDARD = 'STANDARD', _('Standard Lending Book')
+        REFERENCE = 'REFERENCE', _('Reference (Non-circulating)')
+        RESERVE = 'RESERVE', _('Course Reserve (Short Loan)')
+        PERIODICAL = 'PERIODICAL', _('Periodical / Journal')
+
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='copies')
     accession_number = models.CharField(
         max_length=100,
         unique=True,
         db_index=True,
         help_text=_("Unique library barcode or accession number for this physical copy")
+    )
+    item_type = models.CharField(
+        max_length=20,
+        choices=ItemType.choices,
+        default=ItemType.STANDARD,
+        db_index=True,
+        help_text=_("Koha Item Type / Collection Code")
     )
     status = models.CharField(
         max_length=20,

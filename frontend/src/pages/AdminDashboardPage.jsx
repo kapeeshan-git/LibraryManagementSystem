@@ -131,6 +131,8 @@ export default function AdminDashboardPage() {
       department: user.department || '',
       password: '',
       is_active_patron: user.is_active_patron,
+      debarment_reason: user.debarment_reason || '',
+      staff_notes: user.staff_notes || '',
     });
     setUserFormError('');
   };
@@ -147,6 +149,8 @@ export default function AdminDashboardPage() {
       department: departments[0]?.id || '',
       password: '',
       is_active_patron: true,
+      debarment_reason: '',
+      staff_notes: '',
     });
     setIsRegScanned(false);
     setUserFormError('');
@@ -848,7 +852,7 @@ export default function AdminDashboardPage() {
                   className={`px-5 py-2 text-white rounded-lg font-bold shadow transition ${
                     !isAdmin && !isRegScanned
                       ? 'bg-slate-300 cursor-not-allowed text-slate-500'
-                      : 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-[#670047] hover:bg-[#520038]'
                   }`}
                 >
                   {userFormLoading
@@ -968,10 +972,34 @@ export default function AdminDashboardPage() {
                     type="checkbox"
                     checked={userFormData.is_active_patron}
                     onChange={(e) => setUserFormData({ ...userFormData, is_active_patron: e.target.checked })}
-                    className="rounded text-emerald-600"
+                    className="rounded text-[#670047] focus:ring-[#670047]"
                   />
                   <span className="font-semibold text-slate-700">Active Library Patron Privilege</span>
                 </label>
+              </div>
+
+              {!userFormData.is_active_patron && (
+                <div>
+                  <label className="font-bold text-rose-700 block mb-1">Debarment / Suspension Reason</label>
+                  <input
+                    type="text"
+                    value={userFormData.debarment_reason}
+                    onChange={(e) => setUserFormData({ ...userFormData, debarment_reason: e.target.value })}
+                    placeholder="e.g. Unreturned overdue items / Disciplinary suspension"
+                    className="w-full px-3 py-2 border border-rose-300 rounded-lg text-rose-900 bg-rose-50/50"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Staff Internal Notes (Koha borrowernotes)</label>
+                <textarea
+                  rows="2"
+                  value={userFormData.staff_notes}
+                  onChange={(e) => setUserFormData({ ...userFormData, staff_notes: e.target.value })}
+                  placeholder="Notes visible only to library staff and administrators"
+                  className="w-full px-3 py-2 border rounded-lg text-xs"
+                />
               </div>
 
               <div className="flex justify-end space-x-2 pt-4 border-t">
@@ -985,7 +1013,7 @@ export default function AdminDashboardPage() {
                 <button
                   type="submit"
                   disabled={userFormLoading}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow"
+                  className="px-5 py-2 bg-[#670047] hover:bg-[#520038] text-white rounded-lg font-bold shadow transition cursor-pointer"
                 >
                   {userFormLoading ? 'Saving Changes...' : 'Save Changes'}
                 </button>

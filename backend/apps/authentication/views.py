@@ -94,10 +94,14 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         from django.conf import settings
         from django.utils import timezone
         from django.db.models import Sum
+        from apps.reservations.models import Reservation
+        from apps.circulation.services import CirculationService
+
+        rule = CirculationService.get_circulation_rule(user.role)
+        limit = rule.max_checkouts
 
         active_loans = BorrowRecord.objects.filter(user=user, status=BorrowRecord.Status.ACTIVE).select_related('book_copy__book')
         active_loans_count = active_loans.count()
-        limit = settings.STUDENT_MAX_BOOKS if user.role == User.Role.STUDENT else settings.LECTURER_MAX_BOOKS
 
         has_overdue = active_loans.filter(due_date__lt=timezone.now()).exists()
         unpaid_fines = Fine.objects.filter(
@@ -111,30 +115,53 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 
         block_reasons = []
         if not user.is_active_patron:
-            block_reasons.append("Account is inactive or library privileges are suspended.")
+            reason = f": {user.debarment_reason}" if user.debarment_reason else "."
+            block_reasons.append(f"Account is inactive or library privileges are suspended{reason}")
         if active_loans_count >= limit:
-            block_reasons.append(f"Reached maximum borrowing limit ({limit} books).")
+            block_reasons.append(f"Reached maximum borrowing limit ({limit} books) under Koha rules.")
         if has_overdue:
-            block_reasons.append("Has overdue books requiring return.")
+            block_reasons.append("Has overdue books requiring return before new checkouts.")
         if unpaid_fines > 0:
             block_reasons.append(f"Outstanding fines of Rs. {float(unpaid_fines):.2f}.")
+
+        # Koha Waiting Holds (ready for pickup at circulation desk)
+        waiting_holds = Reservation.objects.filter(
+            user=user,
+            status=Reservation.Status.READY_FOR_PICKUP
+        ).select_related('book', 'allocated_copy')
 
         serialized = UserSerializer(user).data
         return Response({
             'user': serialized,
             'active_loans_count': active_loans_count,
             'max_borrow_limit': limit,
+            'loan_period_days': rule.loan_period_days,
             'has_overdue': has_overdue,
             'outstanding_fines': float(unpaid_fines),
             'can_borrow': can_borrow,
             'block_reasons': block_reasons,
+            'waiting_holds': [
+                {
+                    'id': h.id,
+                    'book_title': h.book.title,
+                    'accession_number': h.allocated_copy.accession_number if h.allocated_copy else '',
+                    'hold_expires_at': h.hold_expires_at
+                }
+                for h in waiting_holds
+            ],
             'current_loans': [
                 {
                     'id': l.id,
                     'book_title': l.book_copy.book.title,
+                    'book_isbn': l.book_copy.book.isbn,
                     'accession_number': l.book_copy.accession_number,
+                    'call_number': l.book_copy.book.call_number,
+                    'item_type': l.book_copy.item_type,
+                    'issue_date': l.issue_date,
                     'due_date': l.due_date,
-                    'is_overdue': l.is_currently_overdue
+                    'renewal_count': l.renewal_count,
+                    'is_overdue': l.is_currently_overdue,
+                    'overdue_days': l.overdue_days
                 }
                 for l in active_loans
             ]

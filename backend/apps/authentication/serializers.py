@@ -41,7 +41,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'reg_number', 'email', 'first_name', 'last_name',
             'full_name', 'role', 'department', 'department_name', 'phone_number',
-            'is_active_patron', 'is_staff', 'date_joined'
+            'is_active_patron', 'debarment_reason', 'staff_notes', 'is_staff', 'date_joined'
         ]
         read_only_fields = ['id', 'date_joined']
         extra_kwargs = {

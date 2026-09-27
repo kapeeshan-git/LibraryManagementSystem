@@ -69,6 +69,15 @@ class User(AbstractUser):
         default=True,
         help_text=_("Allows revoking library borrowing privileges without deactivating login")
     )
+    debarment_reason = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text=_("Koha patron debarment / restriction reason (if suspended)")
+    )
+    staff_notes = models.TextField(
+        blank=True,
+        help_text=_("Internal library staff notes on this patron")
+    )
 
     objects = CustomUserManager()
 

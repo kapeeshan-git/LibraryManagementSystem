@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import IdCardModal from '../components/common/IdCardModal';
 import { 
   Users, 
   Upload, 
@@ -10,17 +11,44 @@ import {
   Search, 
   DollarSign, 
   BookOpen, 
-  DownloadCloud 
+  DownloadCloud, 
+  UserPlus, 
+  Edit3, 
+  QrCode, 
+  KeyRound, 
+  Shield 
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'users', 'csv_import', 'fines_settle'
   const [metrics, setMetrics] = useState(null);
   const [users, setUsers] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [unpaidFines, setUnpaidFines] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Modals
+  const [addUserModalOpen, setAddUserModalOpen] = useState(false);
+  const [editUserModalUser, setEditUserModalUser] = useState(null);
+  const [idCardModalUser, setIdCardModalUser] = useState(null);
+
+  // User Form State (Add / Edit)
+  const [userFormData, setUserFormData] = useState({
+    reg_number: '',
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+    role: 'STUDENT',
+    department: '',
+    password: '',
+    is_active_patron: true,
+  });
+  const [userFormLoading, setUserFormLoading] = useState(false);
+  const [userFormError, setUserFormError] = useState('');
+  const [userFormSuccess, setUserFormSuccess] = useState('');
 
   // CSV Import State
   const [csvFile, setCsvFile] = useState(null);
@@ -37,6 +65,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchMetrics();
+    fetchDepartments();
     fetchUsers();
     fetchUnpaidFines();
   }, [userSearch, selectedRole]);
@@ -45,6 +74,15 @@ export default function AdminDashboardPage() {
     try {
       const res = await api.get('/reports/dashboard/');
       setMetrics(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const res = await api.get('/auth/departments/');
+      setDepartments(res.data.results || res.data);
     } catch (err) {
       console.error(err);
     }
@@ -72,6 +110,92 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Open Edit User Modal
+  const openEditUser = (user) => {
+    setEditUserModalUser(user);
+    setUserFormData({
+      reg_number: user.reg_number,
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      email: user.email || '',
+      phone_number: user.phone_number || '',
+      role: user.role,
+      department: user.department || '',
+      password: '',
+      is_active_patron: user.is_active_patron,
+    });
+    setUserFormError('');
+  };
+
+  // Open Add User Modal
+  const openAddUser = () => {
+    setUserFormData({
+      reg_number: '',
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone_number: '',
+      role: 'STUDENT',
+      department: departments[0]?.id || '',
+      password: '',
+      is_active_patron: true,
+    });
+    setUserFormError('');
+    setAddUserModalOpen(true);
+  };
+
+  // Submit Add User
+  const handleAddUserSubmit = async (e) => {
+    e.preventDefault();
+    setUserFormLoading(true);
+    setUserFormError('');
+
+    try {
+      const payload = {
+        ...userFormData,
+        username: userFormData.reg_number.trim(),
+        reg_number: userFormData.reg_number.trim(),
+      };
+      if (!payload.password) {
+        delete payload.password; // Django model serializer defaults to reg_number
+      }
+
+      await api.post('/auth/users/', payload);
+      setAddUserModalOpen(false);
+      setUserFormSuccess(`User '${payload.reg_number}' created successfully.`);
+      fetchUsers();
+      fetchMetrics();
+    } catch (err) {
+      setUserFormError(err.response?.data?.reg_number?.[0] || err.response?.data?.detail || 'Failed to create user.');
+    } finally {
+      setUserFormLoading(false);
+    }
+  };
+
+  // Submit Edit User
+  const handleEditUserSubmit = async (e) => {
+    e.preventDefault();
+    setUserFormLoading(true);
+    setUserFormError('');
+
+    try {
+      const payload = { ...userFormData };
+      if (!payload.password) {
+        delete payload.password; // Don't overwrite if left blank
+      }
+
+      await api.patch(`/auth/users/${editUserModalUser.id}/`, payload);
+      setEditUserModalUser(null);
+      setUserFormSuccess(`User '${editUserModalUser.reg_number}' updated successfully.`);
+      fetchUsers();
+    } catch (err) {
+      setUserFormError(err.response?.data?.detail || 'Failed to update user.');
+    } finally {
+      setUserFormLoading(false);
+    }
+  };
+
+  // Submit CSV Bulk Onboarding
   const handleCsvSubmit = async (e) => {
     e.preventDefault();
     if (!csvFile) {
@@ -125,22 +249,48 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Digital ID Card Modal */}
+      {idCardModalUser && (
+        <IdCardModal
+          user={idCardModalUser}
+          onClose={() => setIdCardModalUser(null)}
+        />
+      )}
+
+      {/* Top Banner */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">System Administration</h1>
-          <p className="text-slate-500 text-xs">University of Vavuniya Library Operations & Governance</p>
+          <p className="text-slate-500 text-xs">University of Vavuniya Patron Accounts, Governance & Circulation Logs</p>
         </div>
 
-        <button
-          onClick={handleExportCirculation}
-          className="flex items-center space-x-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow transition"
-        >
-          <DownloadCloud className="w-4 h-4" />
-          <span>Export Circulation CSV</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={openAddUser}
+            className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow transition"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Add New Patron</span>
+          </button>
+
+          <button
+            onClick={handleExportCirculation}
+            className="flex items-center space-x-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow transition"
+          >
+            <DownloadCloud className="w-4 h-4" />
+            <span>Export Circulation CSV</span>
+          </button>
+        </div>
       </div>
 
-      {/* Tabs */}
+      {userFormSuccess && (
+        <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-between">
+          <span>{userFormSuccess}</span>
+          <button onClick={() => setUserFormSuccess('')} className="text-emerald-600 font-bold">✕</button>
+        </div>
+      )}
+
+      {/* Navigation Tabs */}
       <div className="flex space-x-2 border-b border-slate-200 mb-6 text-xs font-semibold">
         <button
           onClick={() => setActiveTab('overview')}
@@ -152,7 +302,7 @@ export default function AdminDashboardPage() {
           onClick={() => setActiveTab('users')}
           className={`py-3 px-4 border-b-2 transition ${activeTab === 'users' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500'}`}
         >
-          Patrons & Users
+          Patrons & Users ({users.length})
         </button>
         <button
           onClick={() => setActiveTab('csv_import')}
@@ -199,29 +349,39 @@ export default function AdminDashboardPage() {
 
       {/* TAB 2: PATRONS & USERS */}
       {activeTab === 'users' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="text"
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Search user by reg no, name, or username..."
-                className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none"
-              />
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between gap-3">
+            <div className="flex gap-2 flex-1">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search user by reg no, name, or email..."
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none"
+                />
+              </div>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none"
+              >
+                <option value="">All Roles</option>
+                <option value="STUDENT">Students</option>
+                <option value="LECTURER">Lecturers</option>
+                <option value="LIBRARIAN">Librarians</option>
+                <option value="ADMIN">Admins</option>
+              </select>
             </div>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none"
+
+            <button
+              onClick={openAddUser}
+              className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow"
             >
-              <option value="">All Roles</option>
-              <option value="STUDENT">Students</option>
-              <option value="LECTURER">Lecturers</option>
-              <option value="LIBRARIAN">Librarians</option>
-              <option value="ADMIN">Admins</option>
-            </select>
+              <UserPlus className="w-4 h-4" />
+              <span>Add User Form</span>
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -230,19 +390,30 @@ export default function AdminDashboardPage() {
                 <tr>
                   <th className="p-3">Reg No / ID</th>
                   <th className="p-3">Full Name</th>
-                  <th className="p-3">Email</th>
                   <th className="p-3">Role</th>
                   <th className="p-3">Department</th>
                   <th className="p-3">Status</th>
+                  <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {users.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50">
                     <td className="p-3 font-mono font-bold text-slate-800">{u.reg_number}</td>
-                    <td className="p-3 font-semibold">{u.full_name || u.username}</td>
-                    <td className="p-3 text-slate-500">{u.email || '—'}</td>
-                    <td className="p-3 font-bold text-slate-700">{u.role}</td>
+                    <td className="p-3">
+                      <div className="font-semibold text-slate-900">{u.full_name || u.username}</div>
+                      <div className="text-[11px] text-slate-400">{u.email || 'No email provided'}</div>
+                    </td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
+                        u.role === 'LIBRARIAN' ? 'bg-blue-100 text-blue-800' :
+                        u.role === 'LECTURER' ? 'bg-amber-100 text-amber-800' :
+                        'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
                     <td className="p-3 text-slate-600">{u.department_name || 'General'}</td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -250,6 +421,27 @@ export default function AdminDashboardPage() {
                       }`}>
                         {u.is_active_patron ? 'Active' : 'Suspended'}
                       </span>
+                    </td>
+                    <td className="p-3 text-right space-x-2">
+                      {/* ID Card preview with QR code */}
+                      <button
+                        onClick={() => setIdCardModalUser(u)}
+                        title="View / Print Digital Library ID Card with QR"
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md font-semibold text-[11px] transition"
+                      >
+                        <QrCode className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>ID Card</span>
+                      </button>
+
+                      {/* Edit User Button */}
+                      <button
+                        onClick={() => openEditUser(u)}
+                        title="Edit User Information"
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md font-semibold text-[11px] transition"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -370,7 +562,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* Settle Modal */}
+          {/* Settle Fine Modal */}
           {selectedFine && (
             <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
@@ -424,6 +616,282 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ADD NEW USER MODAL FORM */}
+      {addUserModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Add New Library Patron / Staff</h2>
+            <p className="text-xs text-slate-500 mb-4">Manually register a student, lecturer, or staff account.</p>
+
+            {userFormError && (
+              <div className="p-3 bg-rose-50 text-rose-800 rounded-lg text-xs font-semibold mb-4 border border-rose-200">
+                {userFormError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddUserSubmit} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Registration No / Staff ID *</label>
+                  <input
+                    type="text"
+                    required
+                    value={userFormData.reg_number}
+                    onChange={(e) => setUserFormData({ ...userFormData, reg_number: e.target.value })}
+                    placeholder="e.g. 2022/ICT/150"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Role *</label>
+                  <select
+                    value={userFormData.role}
+                    onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="STUDENT">Student</option>
+                    <option value="LECTURER">Lecturer / Academic Staff</option>
+                    <option value="LIBRARIAN">Librarian</option>
+                    <option value="ADMIN">System Administrator</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={userFormData.first_name}
+                    onChange={(e) => setUserFormData({ ...userFormData, first_name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={userFormData.last_name}
+                    onChange={(e) => setUserFormData({ ...userFormData, last_name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={userFormData.email}
+                    onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                    placeholder="patron@vau.ac.lk"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={userFormData.phone_number}
+                    onChange={(e) => setUserFormData({ ...userFormData, phone_number: e.target.value })}
+                    placeholder="077xxxxxxx"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Department</label>
+                <select
+                  value={userFormData.department}
+                  onChange={(e) => setUserFormData({ ...userFormData, department: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">No Department Assigned</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name} ({d.faculty})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Password (Leave blank to use Registration No)</label>
+                <input
+                  type="password"
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                  placeholder="Defaults to registration number"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+
+              <div className="pt-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={userFormData.is_active_patron}
+                    onChange={(e) => setUserFormData({ ...userFormData, is_active_patron: e.target.checked })}
+                    className="rounded text-emerald-600"
+                  />
+                  <span className="font-semibold text-slate-700">Grant active borrowing privilege</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setAddUserModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={userFormLoading}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow"
+                >
+                  {userFormLoading ? 'Creating User...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT USER MODAL FORM */}
+      {editUserModalUser && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Edit Patron Information</h2>
+            <p className="text-xs text-slate-500 mb-4">
+              Editing: <strong className="text-slate-800">{editUserModalUser.reg_number}</strong>
+            </p>
+
+            {userFormError && (
+              <div className="p-3 bg-rose-50 text-rose-800 rounded-lg text-xs font-semibold mb-4 border border-rose-200">
+                {userFormError}
+              </div>
+            )}
+
+            <form onSubmit={handleEditUserSubmit} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={userFormData.first_name}
+                    onChange={(e) => setUserFormData({ ...userFormData, first_name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={userFormData.last_name}
+                    onChange={(e) => setUserFormData({ ...userFormData, last_name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Role *</label>
+                  <select
+                    value={userFormData.role}
+                    onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="STUDENT">Student</option>
+                    <option value="LECTURER">Lecturer / Academic Staff</option>
+                    <option value="LIBRARIAN">Librarian</option>
+                    <option value="ADMIN">System Administrator</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Department</label>
+                  <select
+                    value={userFormData.department}
+                    onChange={(e) => setUserFormData({ ...userFormData, department: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">No Department Assigned</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={userFormData.email}
+                    onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={userFormData.phone_number}
+                    onChange={(e) => setUserFormData({ ...userFormData, phone_number: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Reset Password (Leave blank to keep unchanged)</label>
+                <input
+                  type="password"
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                  placeholder="Enter new password"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+
+              <div className="pt-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={userFormData.is_active_patron}
+                    onChange={(e) => setUserFormData({ ...userFormData, is_active_patron: e.target.checked })}
+                    className="rounded text-emerald-600"
+                  />
+                  <span className="font-semibold text-slate-700">Active Library Patron Privilege</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setEditUserModalUser(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={userFormLoading}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow"
+                >
+                  {userFormLoading ? 'Saving Changes...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

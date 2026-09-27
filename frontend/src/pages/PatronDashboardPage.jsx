@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import IdCardModal from '../components/common/IdCardModal';
 import { 
   BookOpen, 
   Clock, 
@@ -10,7 +11,8 @@ import {
   CheckCircle, 
   Bell, 
   Receipt,
-  Trash2 
+  Trash2,
+  QrCode 
 } from 'lucide-react';
 
 export default function PatronDashboardPage() {
@@ -23,6 +25,8 @@ export default function PatronDashboardPage() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState({ text: '', type: '' });
+
+  const [idCardOpen, setIdCardOpen] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -99,8 +103,16 @@ export default function PatronDashboardPage() {
           </p>
         </div>
 
-        {/* Quick KPI pills */}
-        <div className="flex flex-wrap gap-2 text-xs">
+        {/* Quick KPI pills & ID Card button */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <button
+            onClick={() => setIdCardOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow transition"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Digital ID Card (QR)</span>
+          </button>
+
           <div className="bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-xl border border-emerald-200 font-bold">
             {metrics?.my_active_loans ?? loans.length} Active Loans
           </div>
@@ -112,6 +124,13 @@ export default function PatronDashboardPage() {
           </div>
         </div>
       </div>
+
+      {idCardOpen && (
+        <IdCardModal
+          user={user}
+          onClose={() => setIdCardOpen(false)}
+        />
+      )}
 
       {actionMessage.text && (
         <div className={`mb-6 p-4 rounded-xl text-xs font-semibold flex items-center space-x-2 ${

@@ -2,8 +2,10 @@ from rest_framework import viewsets, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
+from django.db import models
 from .models import Department
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -46,6 +48,14 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().select_related('department')
     serializer_class = UserSerializer
 
+    def get_permissions(self):
+        return [IsAuthenticated()]
+
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        if not request.user.is_admin_or_librarian:
+            self.permission_denied(request, message="Staff role required to manage patrons.")
+
     def get_queryset(self):
         qs = super().get_queryset()
         role = self.request.query_params.get('role')
@@ -57,8 +67,78 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         if department:
             qs = qs.filter(department_id=department)
         if search:
-            qs = qs.filter(reg_number__icontains=search) | qs.filter(username__icontains=search) | qs.filter(first_name__icontains=search) | qs.filter(last_name__icontains=search)
+            qs = qs.filter(
+                models.Q(reg_number__icontains=search) |
+                models.Q(username__icontains=search) |
+                models.Q(first_name__icontains=search) |
+                models.Q(last_name__icontains=search)
+            )
         return qs
+
+    @action(detail=False, methods=['get'], url_path='lookup')
+    def lookup_patron(self, request):
+        """Lookup patron by ID card QR scan / reg_number and verify borrowing eligibility."""
+        reg = request.query_params.get('reg_number', '').strip()
+        if not reg:
+            return Response({'error': 'Missing reg_number query parameter.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(reg_number__iexact=reg).select_related('department').first()
+        if not user:
+            user = User.objects.filter(username__iexact=reg).select_related('department').first()
+
+        if not user:
+            return Response({'error': f"Patron with ID '{reg}' not found in university records."}, status=status.HTTP_404_NOT_FOUND)
+
+        from apps.circulation.models import BorrowRecord
+        from apps.fines.models import Fine
+        from django.conf import settings
+        from django.utils import timezone
+        from django.db.models import Sum
+
+        active_loans = BorrowRecord.objects.filter(user=user, status=BorrowRecord.Status.ACTIVE).select_related('book_copy__book')
+        active_loans_count = active_loans.count()
+        limit = settings.STUDENT_MAX_BOOKS if user.role == User.Role.STUDENT else settings.LECTURER_MAX_BOOKS
+
+        has_overdue = active_loans.filter(due_date__lt=timezone.now()).exists()
+        unpaid_fines = Fine.objects.filter(
+            user=user,
+            status__in=[Fine.Status.UNPAID, Fine.Status.PARTIALLY_PAID]
+        ).aggregate(
+            unpaid=Sum('amount') - Sum('paid_amount')
+        )['unpaid'] or 0.00
+
+        can_borrow = user.is_active_patron and (active_loans_count < limit) and not has_overdue and (unpaid_fines <= 0)
+
+        block_reasons = []
+        if not user.is_active_patron:
+            block_reasons.append("Account is inactive or library privileges are suspended.")
+        if active_loans_count >= limit:
+            block_reasons.append(f"Reached maximum borrowing limit ({limit} books).")
+        if has_overdue:
+            block_reasons.append("Has overdue books requiring return.")
+        if unpaid_fines > 0:
+            block_reasons.append(f"Outstanding fines of Rs. {float(unpaid_fines):.2f}.")
+
+        serialized = UserSerializer(user).data
+        return Response({
+            'user': serialized,
+            'active_loans_count': active_loans_count,
+            'max_borrow_limit': limit,
+            'has_overdue': has_overdue,
+            'outstanding_fines': float(unpaid_fines),
+            'can_borrow': can_borrow,
+            'block_reasons': block_reasons,
+            'current_loans': [
+                {
+                    'id': l.id,
+                    'book_title': l.book_copy.book.title,
+                    'accession_number': l.book_copy.accession_number,
+                    'due_date': l.due_date,
+                    'is_overdue': l.is_currently_overdue
+                }
+                for l in active_loans
+            ]
+        })
 
 
 class BatchCSVImportView(APIView):

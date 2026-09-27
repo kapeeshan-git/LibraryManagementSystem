@@ -15,7 +15,9 @@ import {
   X,
   ExternalLink,
   Clock,
-  MapPin
+  MapPin,
+  Library,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -53,75 +55,95 @@ export default function Navbar() {
   });
 
   return (
-    <header className="sticky top-0 z-50 shadow-md">
-      {/* Top Institutional Utility Strip (Matching vau.ac.lk & lib.cmb.ac.lk) */}
-      <div className="bg-[#4b0150] text-slate-200 text-[11px] py-1.5 px-4 sm:px-6 lg:px-8 border-b border-[#7a1e5c]/40">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-1">
-          <div className="flex items-center space-x-3 text-slate-300">
-            <span className="font-semibold text-[#ffcb00]">University of Vavuniya</span>
-            <span className="hidden md:inline text-slate-400">|</span>
-            <span className="hidden md:flex items-center space-x-1">
-              <MapPin className="w-3 h-3 text-[#ffcb00]" />
-              <span>Main Library, Pambaimadu Campus</span>
-            </span>
-            <span className="hidden lg:inline text-slate-400">|</span>
-            <span className="hidden lg:flex items-center space-x-1 text-slate-300">
-              <Clock className="w-3 h-3 text-[#ffcb00]" />
-              <span>Library Hours: 8:00 AM – 6:00 PM</span>
-            </span>
-          </div>
+    <header className="sticky top-0 z-50 shadow-md bg-white">
+      {/* ============================================================== */}
+      {/* TIER 1: OFFICIAL VAU.AC.LK BRAND HEADER (White Background)    */}
+      {/* ============================================================== */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: Official University Logo Banner & Portal Title */}
+            <div className="flex items-center space-x-4">
+              <Link to="/catalog" className="flex items-center space-x-3 group">
+                <img 
+                  src="/cropped-UoV_Logo.png" 
+                  alt="University of Vavuniya | வவுனியா பல்கலைக்கழகம் | වවුනියා විශ්වවිද්‍යාලය" 
+                  className="h-12 sm:h-14 md:h-16 w-auto object-contain transition group-hover:opacity-95"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/uov_logo.png';
+                  }}
+                />
+              </Link>
 
-          <div className="flex items-center space-x-3 text-slate-300">
-            <a 
-              href="https://vau.ac.lk/" 
-              target="_blank" 
-              rel="noreferrer" 
-              className="hover:text-[#ffcb00] transition flex items-center space-x-1"
-            >
-              <span>Main University Portal</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </a>
-            <span>•</span>
-            <a 
-              href="https://vau.ac.lk/library/" 
-              target="_blank" 
-              rel="noreferrer" 
-              className="hover:text-[#ffcb00] transition"
-            >
-              About Library
-            </a>
+              {/* Vertical Divider & ULMS System Brand */}
+              <div className="hidden sm:block border-l-2 border-slate-200 pl-4 py-0.5">
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-xs md:text-sm font-black text-[#670047] tracking-tight uppercase">
+                    Library Management System (ULMS)
+                  </span>
+                  <span className="text-[10px] bg-[#670047]/10 text-[#670047] font-black px-2 py-0.2 rounded-full border border-[#670047]/20">
+                    FAS • Group 12
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 font-semibold">
+                  Main Library, University of Vavuniya, Sri Lanka
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Institutional Utility Links (Matching vau.ac.lk top navigation) */}
+            <div className="hidden md:flex items-center space-x-5 text-xs">
+              <div className="flex items-center space-x-1.5 text-slate-600 font-medium">
+                <MapPin className="w-3.5 h-3.5 text-[#670047]" />
+                <span>Pambaimadu Campus</span>
+              </div>
+
+              <div className="flex items-center space-x-1.5 text-slate-600 font-medium">
+                <Clock className="w-3.5 h-3.5 text-[#670047]" />
+                <span>8:00 AM – 6:00 PM</span>
+              </div>
+
+              <a 
+                href="https://vau.ac.lk/" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="text-[#670047] hover:text-[#520038] font-bold flex items-center space-x-1 transition"
+              >
+                <span>vau.ac.lk</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+
+              <a 
+                href="https://vau.ac.lk/library/" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="text-slate-600 hover:text-[#670047] font-semibold transition"
+              >
+                About Library
+              </a>
+            </div>
+
+            {/* Mobile Menu Toggle Button */}
+            <div className="flex lg:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="text-[#670047] hover:text-[#520038] p-2 rounded-lg hover:bg-slate-100"
+                aria-label="Toggle navigation menu"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main University Navbar */}
+      {/* ============================================================== */}
+      {/* TIER 2: MAIN NAVIGATION BAR (Vavuniya Maroon #670047)          */}
+      {/* ============================================================== */}
       <nav className="bg-[#670047] text-white border-b-2 border-[#ffcb00]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            {/* University Crest & Title */}
-            <Link to="/catalog" className="flex items-center space-x-3.5 group">
-              <img 
-                src="/uov_logo.png" 
-                alt="University of Vavuniya Crest" 
-                className="h-14 w-auto object-contain drop-shadow"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://www.vau.ac.lk/wp-content/uploads/2021/07/cropped-UoV_Logo.png';
-                }}
-              />
-              <div className="leading-tight">
-                <div className="text-base sm:text-lg font-black tracking-tight text-white group-hover:text-[#ffcb00] transition">
-                  UNIVERSITY OF VAVUNIYA
-                </div>
-                <div className="text-[11px] font-bold tracking-wide text-[#ffcb00]">
-                  LIBRARY MANAGEMENT SYSTEM (ULMS)
-                </div>
-                <div className="text-[10px] text-slate-200 hidden sm:block">
-                  Faculty of Applied Science • Group 12
-                </div>
-              </div>
-            </Link>
-
+          <div className="flex items-center justify-between h-14">
             {/* Desktop Navigation Links */}
             <div className="hidden lg:flex items-center space-x-1">
               {filteredLinks.map((link) => {
@@ -131,73 +153,70 @@ export default function Navbar() {
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold transition ${
+                    className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
                       isActive
                         ? 'bg-[#4b0150] text-[#ffcb00] shadow-inner border-b-2 border-[#ffcb00]'
-                        : 'text-slate-100 hover:bg-[#7a1e5c] hover:text-white'
+                        : 'text-slate-100 hover:bg-[#520038] hover:text-[#ffcb00]'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-4 h-4 text-[#ffcb00]" />
                     <span>{link.name}</span>
                   </Link>
                 );
               })}
             </div>
 
-            {/* User Profile / Auth State */}
-            <div className="hidden md:flex items-center space-x-3">
+            {/* Right: Authenticated Patron / Staff Profile Strip */}
+            <div className="hidden md:flex items-center space-x-3 ml-auto">
               {isAuthenticated ? (
-                <div className="flex items-center space-x-3 bg-[#4b0150]/60 p-1.5 pl-3 rounded-2xl border border-white/10">
+                <div className="flex items-center space-x-3">
                   {/* Notification Bell */}
                   <Link 
                     to="/dashboard"
                     title={`${unreadCount} unread notices`}
-                    className="relative p-1.5 text-slate-300 hover:text-white rounded-full hover:bg-[#670047] transition"
+                    className="relative p-2 text-slate-200 hover:text-white rounded-full hover:bg-[#520038] transition"
                   >
                     <Bell className="w-4 h-4 text-[#ffcb00]" />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center px-1.5 py-0.2 text-[10px] font-black text-[#4b0150] bg-[#ffcb00] rounded-full">
+                      <span className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.2 text-[10px] font-black text-slate-950 bg-[#ffcb00] rounded-full shadow-xs">
                         {unreadCount}
                       </span>
                     )}
                   </Link>
 
-                  <div className="text-right">
-                    <div className="text-xs font-bold text-white leading-none">
-                      {user?.first_name ? `${user.first_name} ${user.last_name || ''}` : user?.username}
+                  {/* Patron / Staff Badge */}
+                  <div className="flex items-center space-x-2 bg-[#4b0150] py-1.5 px-3 rounded-xl border border-white/10 text-xs">
+                    <div className="w-6 h-6 rounded-full bg-[#ffcb00] text-slate-950 font-black flex items-center justify-center text-[10px]">
+                      {user?.first_name ? user.first_name[0] : (user?.username ? user.username[0] : 'U')}
                     </div>
-                    <div className="text-[10px] text-[#ffcb00] font-mono mt-0.5 font-semibold">
-                      {user?.reg_number} • <span className="uppercase">{user?.role}</span>
+                    <div className="leading-tight">
+                      <div className="font-bold text-white truncate max-w-[130px]">
+                        {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.username}
+                      </div>
+                      <div className="text-[10px] text-[#ffcb00] font-mono font-bold">
+                        {user?.reg_number} • <span className="uppercase text-[9px]">{user?.role}</span>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Logout Button */}
                   <button
                     onClick={handleLogout}
-                    className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-[#670047] hover:bg-rose-700 text-white text-xs font-bold transition shadow"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/60 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
                   >
-                    <LogOut className="w-3 h-3" />
+                    <LogOut className="w-3.5 h-3.5 text-rose-300" />
                     <span>Logout</span>
                   </button>
                 </div>
               ) : (
                 <Link
                   to="/login"
-                  className="flex items-center space-x-1.5 bg-[#ffcb00] hover:bg-[#e5b600] text-[#4b0150] px-4 py-2 rounded-xl text-xs font-black shadow-md transition"
+                  className="flex items-center space-x-1.5 bg-[#ffcb00] hover:bg-yellow-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-black shadow-md transition"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Patron Login</span>
                 </Link>
               )}
-            </div>
-
-            {/* Mobile Hamburger Menu */}
-            <div className="flex lg:hidden">
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="text-white hover:text-[#ffcb00] p-2"
-              >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
             </div>
           </div>
         </div>
@@ -210,21 +229,21 @@ export default function Navbar() {
                 key={link.path}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-lg text-sm font-bold text-slate-100 hover:bg-[#670047] hover:text-[#ffcb00]"
+                className="block px-3 py-2.5 rounded-xl text-xs font-bold text-slate-100 hover:bg-[#670047] hover:text-[#ffcb00]"
               >
                 {link.name}
               </Link>
             ))}
             <div className="pt-3 border-t border-[#7a1e5c]/60">
               {isAuthenticated ? (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-2 bg-[#670047] rounded-xl text-xs">
                   <div>
-                    <div className="text-xs font-bold text-white">{user?.username} ({user?.role})</div>
-                    <div className="text-[11px] text-[#ffcb00]">{user?.reg_number}</div>
+                    <div className="font-bold text-white">{user?.username} ({user?.role})</div>
+                    <div className="text-[11px] text-[#ffcb00] font-mono">{user?.reg_number}</div>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="text-rose-300 hover:text-white text-xs font-bold px-3 py-1 bg-rose-900/60 rounded-lg"
+                    className="text-rose-200 hover:text-white text-xs font-bold px-3 py-1.5 bg-rose-900/80 rounded-lg transition"
                   >
                     Logout
                   </button>
@@ -233,7 +252,7 @@ export default function Navbar() {
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block text-center bg-[#ffcb00] hover:bg-[#e5b600] text-[#4b0150] font-black px-4 py-2 rounded-lg text-xs"
+                  className="block text-center bg-[#ffcb00] hover:bg-yellow-400 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs shadow-md"
                 >
                   Patron Login
                 </Link>

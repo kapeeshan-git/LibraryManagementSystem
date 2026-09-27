@@ -45,16 +45,18 @@ export default function IdCardModal({ user, onClose }) {
             style={{ minHeight: '390px' }}
           >
             {/* Card Header with Official UoV Crest */}
-            <div className="bg-[#670047] text-white p-3.5 text-center relative border-b-2 border-[#ffcb00]">
-              <img 
-                src="/uov_logo.png" 
-                alt="University of Vavuniya" 
-                className="h-10 mx-auto object-contain mb-1 drop-shadow"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://www.vau.ac.lk/wp-content/uploads/2021/07/cropped-UoV_Logo.png';
-                }}
-              />
+            <div className="bg-[#670047] text-white p-3 text-center relative border-b-2 border-[#ffcb00]">
+              <div className="inline-flex p-1 bg-white rounded-full shadow-md mb-1">
+                <img 
+                  src="/uov_logo.png" 
+                  alt="University of Vavuniya Crest" 
+                  className="h-10 w-10 object-contain"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/cropped-UoV_Logo.png';
+                  }}
+                />
+              </div>
               <h2 className="text-xs font-black uppercase tracking-wider text-white">University of Vavuniya</h2>
               <p className="text-[10px] text-[#ffcb00] font-bold">Library Identification Card</p>
             </div>

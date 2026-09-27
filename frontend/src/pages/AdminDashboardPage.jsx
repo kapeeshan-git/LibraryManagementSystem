@@ -307,9 +307,9 @@ export default function AdminDashboardPage() {
         <div className="flex gap-2">
           <button
             onClick={openAddUser}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow transition"
+            className="flex items-center space-x-1.5 px-4 py-2 bg-[#670047] hover:bg-[#520038] text-white rounded-xl text-xs font-bold shadow transition"
           >
-            <UserPlus className="w-4 h-4" />
+            <UserPlus className="w-4 h-4 text-[#ffcb00]" />
             <span>Add New Patron</span>
           </button>
 
@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
             onClick={handleExportCirculation}
             className="flex items-center space-x-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow transition"
           >
-            <DownloadCloud className="w-4 h-4" />
+            <DownloadCloud className="w-4 h-4 text-[#ffcb00]" />
             <span>Export Circulation CSV</span>
           </button>
         </div>
@@ -331,28 +331,28 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex space-x-2 border-b border-slate-200 mb-6 text-xs font-semibold">
+      <div className="flex space-x-2 border-b border-slate-200 mb-6 text-xs font-bold">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`py-3 px-4 border-b-2 transition ${activeTab === 'overview' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500'}`}
+          className={`py-3 px-4 border-b-2 transition ${activeTab === 'overview' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
         >
           Metrics & Overview
         </button>
         <button
           onClick={() => setActiveTab('users')}
-          className={`py-3 px-4 border-b-2 transition ${activeTab === 'users' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500'}`}
+          className={`py-3 px-4 border-b-2 transition ${activeTab === 'users' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
         >
           Patrons & Users ({users.length})
         </button>
         <button
           onClick={() => setActiveTab('csv_import')}
-          className={`py-3 px-4 border-b-2 transition ${activeTab === 'csv_import' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500'}`}
+          className={`py-3 px-4 border-b-2 transition ${activeTab === 'csv_import' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
         >
           CSV Batch Import
         </button>
         <button
           onClick={() => setActiveTab('fines_settle')}
-          className={`py-3 px-4 border-b-2 transition ${activeTab === 'fines_settle' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500'}`}
+          className={`py-3 px-4 border-b-2 transition ${activeTab === 'fines_settle' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
         >
           Settle Fines ({unpaidFines.length})
         </button>
@@ -417,9 +417,9 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={openAddUser}
-              className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow"
+              className="flex items-center space-x-1.5 px-3.5 py-2 bg-[#670047] hover:bg-[#520038] text-white rounded-lg text-xs font-bold transition shadow"
             >
-              <UserPlus className="w-4 h-4" />
+              <UserPlus className="w-4 h-4 text-[#ffcb00]" />
               <span>Add User Form</span>
             </button>
           </div>

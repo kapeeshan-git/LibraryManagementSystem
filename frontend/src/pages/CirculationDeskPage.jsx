@@ -199,16 +199,16 @@ export default function CirculationDeskPage() {
         <div className="flex gap-2">
           <button
             onClick={() => openScanner('patron', 'Scan Patron Library ID Card QR')}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow transition"
+            className="flex items-center space-x-1.5 px-3 py-2 bg-[#670047] hover:bg-[#520038] text-white rounded-xl text-xs font-bold shadow transition"
           >
-            <QrCode className="w-4 h-4" />
+            <QrCode className="w-4 h-4 text-[#ffcb00]" />
             <span>Scan ID Card</span>
           </button>
           <button
             onClick={() => openScanner(activeTab === 'return' ? 'return_book' : 'issue_book', 'Scan Book Accession Barcode')}
             className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow transition"
           >
-            <Barcode className="w-4 h-4" />
+            <Barcode className="w-4 h-4 text-[#ffcb00]" />
             <span>Scan Book Barcode</span>
           </button>
         </div>
@@ -218,9 +218,9 @@ export default function CirculationDeskPage() {
       <div className="flex space-x-2 border-b border-slate-200 mb-6">
         <button
           onClick={() => { setActiveTab('issue'); setError(''); }}
-          className={`flex items-center space-x-2 py-3 px-4 font-semibold text-xs border-b-2 transition ${
+          className={`flex items-center space-x-2 py-3 px-4 font-bold text-xs border-b-2 transition ${
             activeTab === 'issue'
-              ? 'border-emerald-600 text-emerald-600'
+              ? 'border-[#670047] text-[#670047]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -230,9 +230,9 @@ export default function CirculationDeskPage() {
 
         <button
           onClick={() => { setActiveTab('return'); setError(''); }}
-          className={`flex items-center space-x-2 py-3 px-4 font-semibold text-xs border-b-2 transition ${
+          className={`flex items-center space-x-2 py-3 px-4 font-bold text-xs border-b-2 transition ${
             activeTab === 'return'
-              ? 'border-emerald-600 text-emerald-600'
+              ? 'border-[#670047] text-[#670047]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -242,9 +242,9 @@ export default function CirculationDeskPage() {
 
         <button
           onClick={() => { setActiveTab('lookup'); setError(''); }}
-          className={`flex items-center space-x-2 py-3 px-4 font-semibold text-xs border-b-2 transition ${
+          className={`flex items-center space-x-2 py-3 px-4 font-bold text-xs border-b-2 transition ${
             activeTab === 'lookup'
-              ? 'border-emerald-600 text-emerald-600'
+              ? 'border-[#670047] text-[#670047]'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
@@ -382,9 +382,9 @@ export default function CirculationDeskPage() {
               <button
                 type="submit"
                 disabled={loading || (patronData && !patronData.can_borrow)}
-                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition disabled:opacity-50 flex items-center justify-center space-x-2"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#670047] hover:bg-[#520038] text-white font-bold text-xs shadow transition disabled:opacity-50 flex items-center justify-center space-x-2"
               >
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="w-4 h-4 text-[#ffcb00]" />
                 <span>{loading ? 'Processing Checkout...' : 'Complete Lending (Issue Book)'}</span>
               </button>
             </form>
@@ -571,7 +571,7 @@ export default function CirculationDeskPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition"
+                className="w-full py-2.5 bg-[#670047] hover:bg-[#520038] text-white font-bold rounded-xl shadow transition"
               >
                 {loading ? 'Processing Check-in...' : 'Check-In Returned Book'}
               </button>

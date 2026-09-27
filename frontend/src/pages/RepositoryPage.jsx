@@ -123,21 +123,23 @@ export default function RepositoryPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Banner */}
-      <div className="bg-slate-900 rounded-3xl p-8 mb-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-gradient-to-r from-[#670047] via-[#520038] to-[#380026] rounded-3xl p-8 mb-8 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-[#ffcb00]/20">
         <div>
-          <span className="text-xs uppercase font-bold tracking-wider text-emerald-400">Institutional Archive</span>
-          <h1 className="text-3xl font-extrabold tracking-tight mt-1">Research Publications Repository</h1>
-          <p className="text-slate-400 text-sm mt-1 max-w-2xl">
-            Explore university pre-prints, conference proceedings, and faculty journal papers with open and campus-only distribution.
+          <span className="inline-block text-xs uppercase font-extrabold tracking-wider bg-[#ffcb00] text-slate-950 px-2.5 py-0.5 rounded-full mb-2">
+            Institutional Digital Repository
+          </span>
+          <h1 className="text-3xl font-extrabold tracking-tight">University of Vavuniya Research Archive</h1>
+          <p className="text-pink-100 text-sm mt-1 max-w-2xl opacity-90">
+            Explore university pre-prints, faculty research, theses, and conference proceedings with open academic access.
           </p>
         </div>
 
         {(isLecturer || isStaff) && (
           <button
             onClick={() => setUploadModalOpen(true)}
-            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md transition"
+            className="flex items-center space-x-2 bg-[#ffcb00] hover:bg-yellow-400 text-slate-950 px-5 py-3 rounded-xl font-black text-sm shadow-lg transition cursor-pointer"
           >
-            <UploadCloud className="w-5 h-5" />
+            <UploadCloud className="w-5 h-5 text-slate-950" />
             <span>Submit Research Paper</span>
           </button>
         )}
@@ -153,12 +155,12 @@ export default function RepositoryPage() {
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchPapers()}
             placeholder="Search papers by title, author name, abstract, or DOI..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#670047] focus:outline-none"
           />
         </div>
         <button
           onClick={fetchPapers}
-          className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition"
+          className="px-5 py-2.5 bg-[#670047] hover:bg-[#520038] text-white rounded-xl text-sm font-bold transition shadow"
         >
           Search
         </button>

@@ -107,9 +107,9 @@ export default function PatronDashboardPage() {
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <button
             onClick={() => setIdCardOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow transition"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#670047] hover:bg-[#520038] text-white rounded-xl font-bold shadow transition"
           >
-            <QrCode className="w-3.5 h-3.5" />
+            <QrCode className="w-3.5 h-3.5 text-[#ffcb00]" />
             <span>Digital ID Card (QR)</span>
           </button>
 
@@ -145,8 +145,8 @@ export default function PatronDashboardPage() {
       <div className="flex space-x-2 border-b border-slate-200 mb-6">
         <button
           onClick={() => setActiveTab('loans')}
-          className={`flex items-center space-x-1.5 py-3 px-4 font-semibold text-xs border-b-2 transition ${
-            activeTab === 'loans' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          className={`flex items-center space-x-1.5 py-3 px-4 font-bold text-xs border-b-2 transition ${
+            activeTab === 'loans' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <BookOpen className="w-4 h-4" />
@@ -155,8 +155,8 @@ export default function PatronDashboardPage() {
 
         <button
           onClick={() => setActiveTab('holds')}
-          className={`flex items-center space-x-1.5 py-3 px-4 font-semibold text-xs border-b-2 transition ${
-            activeTab === 'holds' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          className={`flex items-center space-x-1.5 py-3 px-4 font-bold text-xs border-b-2 transition ${
+            activeTab === 'holds' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <Bookmark className="w-4 h-4" />
@@ -165,8 +165,8 @@ export default function PatronDashboardPage() {
 
         <button
           onClick={() => setActiveTab('fines')}
-          className={`flex items-center space-x-1.5 py-3 px-4 font-semibold text-xs border-b-2 transition ${
-            activeTab === 'fines' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          className={`flex items-center space-x-1.5 py-3 px-4 font-bold text-xs border-b-2 transition ${
+            activeTab === 'fines' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <Receipt className="w-4 h-4" />
@@ -175,8 +175,8 @@ export default function PatronDashboardPage() {
 
         <button
           onClick={() => setActiveTab('notices')}
-          className={`flex items-center space-x-1.5 py-3 px-4 font-semibold text-xs border-b-2 transition ${
-            activeTab === 'notices' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+          className={`flex items-center space-x-1.5 py-3 px-4 font-bold text-xs border-b-2 transition ${
+            activeTab === 'notices' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
           <Bell className="w-4 h-4" />

@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Q
+from ulms_core.pagination import StandardResultsSetPagination
 from .models import Category, Author, Book, BookCopy
 from .serializers import (
     CategorySerializer,
@@ -54,6 +55,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all().prefetch_related('authors', 'copies').select_related('category')
     serializer_class = BookSerializer
+    pagination_class = StandardResultsSetPagination
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:

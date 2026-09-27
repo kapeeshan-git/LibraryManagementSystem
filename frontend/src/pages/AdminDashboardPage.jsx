@@ -26,7 +26,11 @@ import {
   BookPlus,
   Barcode,
   Layers,
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -48,6 +52,9 @@ export default function AdminDashboardPage() {
   const [adminBookLoading, setAdminBookLoading] = useState(false);
   const [adminBookModalOpen, setAdminBookModalOpen] = useState(false);
   const [adminBookToEdit, setAdminBookToEdit] = useState(null);
+  const [adminBookPage, setAdminBookPage] = useState(1);
+  const [adminBookPageSize, setAdminBookPageSize] = useState(25);
+  const [adminBookTotalCount, setAdminBookTotalCount] = useState(0);
 
   // Modals
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
@@ -90,19 +97,27 @@ export default function AdminDashboardPage() {
     fetchDepartments();
     fetchUsers();
     fetchUnpaidFines();
-    fetchAdminBooks();
     fetchCatalogCategories();
-  }, [userSearch, selectedRole, adminBookSearch, adminBookCategory]);
+  }, [userSearch, selectedRole]);
 
-  const fetchAdminBooks = async () => {
+  useEffect(() => {
+    fetchAdminBooks(adminBookPage, adminBookPageSize);
+  }, [adminBookPage, adminBookPageSize, adminBookSearch, adminBookCategory]);
+
+  const fetchAdminBooks = async (pageToFetch = adminBookPage, sizeToFetch = adminBookPageSize) => {
     setAdminBookLoading(true);
     try {
-      let url = `/catalog/books/?q=${encodeURIComponent(adminBookSearch)}`;
+      let url = `/catalog/books/?page=${pageToFetch}&page_size=${sizeToFetch}&q=${encodeURIComponent(adminBookSearch)}`;
       if (adminBookCategory) url += `&category=${adminBookCategory}`;
       const res = await api.get(url);
-      setAdminBooks(res.data.results || res.data);
+      const items = res.data.results || (Array.isArray(res.data) ? res.data : []);
+      const count = typeof res.data.count === 'number' ? res.data.count : items.length;
+      setAdminBooks(items);
+      setAdminBookTotalCount(count);
     } catch (err) {
       console.error('Failed to fetch admin books', err);
+      setAdminBooks([]);
+      setAdminBookTotalCount(0);
     } finally {
       setAdminBookLoading(false);
     }
@@ -151,7 +166,7 @@ export default function AdminDashboardPage() {
 
   const fetchUsers = async () => {
     try {
-      let url = `/auth/users/?search=${encodeURIComponent(userSearch)}`;
+      let url = `/auth/users/?page_size=100&search=${encodeURIComponent(userSearch)}`;
       if (selectedRole) url += `&role=${selectedRole}`;
       const res = await api.get(url);
       setUsers(res.data.results || res.data);
@@ -513,7 +528,10 @@ export default function AdminDashboardPage() {
                 <input
                   type="text"
                   value={adminBookSearch}
-                  onChange={(e) => setAdminBookSearch(e.target.value)}
+                  onChange={(e) => {
+                    setAdminBookSearch(e.target.value);
+                    setAdminBookPage(1);
+                  }}
                   placeholder="Filter by title, ISBN, author, call no., or shelf location..."
                   className="w-full pl-10 pr-3.5 py-2.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#670047]"
                 />
@@ -521,7 +539,10 @@ export default function AdminDashboardPage() {
 
               <select
                 value={adminBookCategory}
-                onChange={(e) => setAdminBookCategory(e.target.value)}
+                onChange={(e) => {
+                  setAdminBookCategory(e.target.value);
+                  setAdminBookPage(1);
+                }}
                 className="px-3.5 py-2.5 text-xs border border-slate-300 rounded-xl focus:outline-none bg-white font-medium text-slate-700"
               >
                 <option value="">All Academic Disciplines</option>
@@ -620,6 +641,72 @@ export default function AdminDashboardPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Admin Catalog Table Pagination Bar */}
+            {!adminBookLoading && adminBookTotalCount > 0 && (
+              <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="flex items-center space-x-2 text-slate-600">
+                  <span>
+                    Showing <strong className="text-slate-900 font-bold">{(adminBookPage - 1) * adminBookPageSize + 1}</strong> to <strong className="text-slate-900 font-bold">{Math.min(adminBookPage * adminBookPageSize, adminBookTotalCount)}</strong> of <strong className="text-[#670047] font-black">{adminBookTotalCount}</strong> titles
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span className="text-slate-500 font-semibold">Rows:</span>
+                  <select
+                    value={adminBookPageSize}
+                    onChange={(e) => {
+                      setAdminBookPageSize(Number(e.target.value));
+                      setAdminBookPage(1);
+                    }}
+                    className="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-800"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={300}>All ({adminBookTotalCount})</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    onClick={() => setAdminBookPage(1)}
+                    disabled={adminBookPage === 1}
+                    className="p-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition"
+                    title="First Page"
+                  >
+                    <ChevronsLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setAdminBookPage(p => Math.max(1, p - 1))}
+                    disabled={adminBookPage === 1}
+                    className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none font-bold text-xs flex items-center space-x-1 transition"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Prev</span>
+                  </button>
+
+                  <span className="px-2.5 py-1 font-bold text-slate-700 bg-white border border-slate-200 rounded-lg">
+                    Page {adminBookPage} of {Math.max(1, Math.ceil(adminBookTotalCount / adminBookPageSize))}
+                  </span>
+
+                  <button
+                    onClick={() => setAdminBookPage(p => Math.min(Math.ceil(adminBookTotalCount / adminBookPageSize), p + 1))}
+                    disabled={adminBookPage >= Math.ceil(adminBookTotalCount / adminBookPageSize)}
+                    className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none font-bold text-xs flex items-center space-x-1 transition"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setAdminBookPage(Math.ceil(adminBookTotalCount / adminBookPageSize))}
+                    disabled={adminBookPage >= Math.ceil(adminBookTotalCount / adminBookPageSize)}
+                    className="p-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition"
+                    title="Last Page"
+                  >
+                    <ChevronsRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import BookFormModal from '../components/catalog/BookFormModal';
@@ -12,26 +12,43 @@ import {
   MapPin, 
   Tag, 
   AlertCircle,
-  BookOpen,
-  FileText,
-  Repeat,
-  QrCode,
-  Sparkles,
-  Info,
-  BookPlus,
-  Edit3,
-  Layers,
-  Barcode
+  BookOpen, 
+  FileText, 
+  Repeat, 
+  QrCode, 
+  Sparkles, 
+  Info, 
+  BookPlus, 
+  Edit3, 
+  Layers, 
+  Barcode,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  RotateCcw,
+  SlidersHorizontal,
+  X
 } from 'lucide-react';
 
 export default function CatalogPage() {
   const { isAuthenticated, isStaff, isAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Search and filter state initialized from URL search params
+  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
+  const [availableOnly, setAvailableOnly] = useState(searchParams.get('available') === 'true');
+
+  // Book results and pagination state
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [availableOnly, setAvailableOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(24);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // Selection & Modal States
   const [selectedBook, setSelectedBook] = useState(null);
   const [reservationMessage, setReservationMessage] = useState({ text: '', type: '' });
   const [actionLoading, setActionLoading] = useState(false);
@@ -42,37 +59,142 @@ export default function CatalogPage() {
 
   useEffect(() => {
     fetchCategories();
-    fetchBooks();
-  }, [selectedCategory, availableOnly]);
+  }, []);
+
+  // Sync state if URL query changes externally
+  useEffect(() => {
+    const qParam = searchParams.get('q');
+    const catParam = searchParams.get('category');
+    const availParam = searchParams.get('available');
+
+    if (qParam !== null && qParam !== search) {
+      setSearch(qParam);
+    }
+    if (catParam !== null && catParam !== selectedCategory) {
+      setSelectedCategory(catParam);
+    }
+    if (availParam !== null && (availParam === 'true') !== availableOnly) {
+      setAvailableOnly(availParam === 'true');
+    }
+  }, [searchParams]);
+
+  // Fetch books whenever page, pageSize, category, or availability changes
+  useEffect(() => {
+    fetchBooks(page, pageSize);
+  }, [page, pageSize, selectedCategory, availableOnly]);
 
   const fetchCategories = async () => {
     try {
       const res = await api.get('/catalog/categories/');
-      setCategories(res.data.results || res.data);
+      setCategories(res.data.results || res.data || []);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load categories', err);
     }
   };
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (pageToFetch = page, sizeToFetch = pageSize) => {
     setLoading(true);
     try {
-      let url = `/catalog/books/?q=${encodeURIComponent(search)}`;
+      let url = `/catalog/books/?page=${pageToFetch}&page_size=${sizeToFetch}`;
+      if (search.trim()) url += `&q=${encodeURIComponent(search.trim())}`;
       if (selectedCategory) url += `&category=${selectedCategory}`;
       if (availableOnly) url += `&available=true`;
       
       const res = await api.get(url);
-      setBooks(res.data.results || res.data);
+      const items = res.data.results || (Array.isArray(res.data) ? res.data : []);
+      const count = typeof res.data.count === 'number' ? res.data.count : items.length;
+      
+      setBooks(items);
+      setTotalCount(count);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch books', err);
+      setBooks([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    fetchBooks();
+    if (e) e.preventDefault();
+    setPage(1);
+    const params = {};
+    if (search.trim()) params.q = search.trim();
+    if (selectedCategory) params.category = selectedCategory;
+    if (availableOnly) params.available = 'true';
+    setSearchParams(params);
+    fetchBooks(1, pageSize);
+  };
+
+  const handleCategoryChange = (catId) => {
+    setSelectedCategory(catId);
+    setPage(1);
+    const params = {};
+    if (search.trim()) params.q = search.trim();
+    if (catId) params.category = catId;
+    if (availableOnly) params.available = 'true';
+    setSearchParams(params);
+  };
+
+  const handleAvailableToggle = (checked) => {
+    setAvailableOnly(checked);
+    setPage(1);
+    const params = {};
+    if (search.trim()) params.q = search.trim();
+    if (selectedCategory) params.category = selectedCategory;
+    if (checked) params.available = 'true';
+    setSearchParams(params);
+  };
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setSelectedCategory('');
+    setAvailableOnly(false);
+    setPage(1);
+    setSearchParams({});
+    // Trigger immediate refresh with cleared values
+    setTimeout(() => {
+      fetchBooks(1, pageSize);
+    }, 0);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const startIndex = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endIndex = Math.min(page * pageSize, totalCount);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === page) return;
+    setPage(newPage);
+    const elem = document.getElementById('catalog-results');
+    if (elem) {
+      elem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize);
+    setPage(1);
+  };
+
+  const getPaginationItems = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const items = [];
+    items.push(1);
+    if (page > 3) {
+      items.push('...');
+    }
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+    for (let i = start; i <= end; i++) {
+      items.push(i);
+    }
+    if (page < totalPages - 2) {
+      items.push('...');
+    }
+    items.push(totalPages);
+    return items;
   };
 
   const handlePlaceHold = async (bookId) => {
@@ -91,7 +213,7 @@ export default function CatalogPage() {
           ? `Hold Placed! A copy has been set aside at the library desk for 48 hours.`
           : `Reserved! You are in position #${res.data.queue_position} in line.`
       });
-      fetchBooks();
+      fetchBooks(page, pageSize);
     } catch (err) {
       setReservationMessage({
         type: 'error',
@@ -109,10 +231,10 @@ export default function CatalogPage() {
         <div className="flex items-center space-x-2">
           <Info className="w-4 h-4 text-[#670047] shrink-0" />
           <span className="font-semibold">
-            <strong>Library Notice:</strong> Physical checkouts require your Student/Staff University ID Card QR. View your digital QR card from your dashboard.
+            <strong>Library Notice:</strong> Physical checkouts require your Student/Staff University ID Card QR. Main Library open Monday to Friday 8:00 AM – 8:00 PM.
           </span>
         </div>
-        <span className="hidden md:inline font-mono font-bold text-[11px] bg-[#670047] text-[#ffcb00] px-2 py-0.5 rounded">
+        <span className="hidden md:inline font-mono font-bold text-[11px] bg-[#670047] text-[#ffcb00] px-2.5 py-0.5 rounded">
           Term 2 Circulation Active
         </span>
       </div>
@@ -121,7 +243,7 @@ export default function CatalogPage() {
       <div className="bg-gradient-to-br from-[#670047] via-[#4b0150] to-[#1b3058] rounded-3xl p-8 sm:p-10 text-white shadow-xl relative overflow-hidden">
         {/* Subtle decorative crest watermark */}
         <div className="absolute right-4 -bottom-6 opacity-10 pointer-events-none">
-          <img src="/uov_logo.png" alt="" className="w-72 h-auto" />
+          <img src="/uov_logo.png" alt="" className="w-72 h-auto" onError={(e) => { e.target.style.display = 'none'; }} />
         </div>
 
         <div className="relative z-10 max-w-3xl">
@@ -148,6 +270,19 @@ export default function CatalogPage() {
                 placeholder="Search by Title, Author, ISBN, Subject, Call No., or Shelf..."
                 className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white text-slate-900 placeholder-slate-400 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-[#ffcb00]/50 shadow-lg"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setPage(1);
+                    fetchBooks(1, pageSize);
+                  }}
+                  className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
             <button
               type="submit"
@@ -163,7 +298,7 @@ export default function CatalogPage() {
               <span className="font-semibold text-slate-300">Category:</span>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="bg-[#1b3058] border border-white/20 text-white rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#ffcb00]"
               >
                 <option value="">All Academic Disciplines</option>
@@ -177,7 +312,7 @@ export default function CatalogPage() {
               <input
                 type="checkbox"
                 checked={availableOnly}
-                onChange={(e) => setAvailableOnly(e.target.checked)}
+                onChange={(e) => handleAvailableToggle(e.target.checked)}
                 className="rounded text-[#ffcb00] focus:ring-[#ffcb00]"
               />
               <span className="font-medium text-white">Available on Shelf Only</span>
@@ -237,7 +372,7 @@ export default function CatalogPage() {
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div>
             <div className="text-[10px] uppercase font-bold text-[#670047] tracking-wider">Main Library Hours</div>
-            <div className="text-xs font-bold text-slate-800 mt-1">Monday – Friday: 8:00 AM – 6:00 PM</div>
+            <div className="text-xs font-bold text-slate-800 mt-1">Monday – Friday: 8:00 AM – 8:00 PM</div>
             <div className="text-[11px] text-slate-500">Saturday: 8:30 AM – 4:30 PM</div>
           </div>
           <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded w-max mt-2 border border-emerald-200">
@@ -246,17 +381,19 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {/* Book Collection Grid */}
-      <div>
+      {/* Book Collection Section */}
+      <div id="catalog-results" className="scroll-mt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-lg font-black text-slate-900 tracking-tight">University Library Holdings</h2>
-            <p className="text-xs text-slate-500">Showing catalog results for University of Vavuniya collections</p>
+            <p className="text-xs text-slate-500">
+              Showing <strong className="text-slate-800">{startIndex}–{endIndex}</strong> of <strong className="text-[#670047] font-bold">{totalCount}</strong> books across University of Vavuniya collections
+            </p>
           </div>
           
           <div className="flex items-center space-x-3">
-            <span className="text-xs font-bold text-[#670047] bg-[#fff0f7] px-3 py-1.5 rounded-full border border-[#ffb3d9]">
-              {books.length} Books Found
+            <span className="text-xs font-bold text-[#670047] bg-[#fff0f7] px-3.5 py-1.5 rounded-full border border-[#ffb3d9] shadow-2xs">
+              {totalCount} Total Books (Page {page} of {totalPages})
             </span>
 
             {/* Admin / Staff Add Book Button */}
@@ -275,14 +412,82 @@ export default function CatalogPage() {
           </div>
         </div>
 
+        {/* Active Filters Display */}
+        {(search || selectedCategory || availableOnly) && (
+          <div className="flex flex-wrap items-center gap-2 mb-5 p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+            <span className="font-bold text-slate-500 flex items-center space-x-1">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+              <span>Active Filters:</span>
+            </span>
+
+            {search && (
+              <span className="bg-white text-slate-800 border border-slate-300 px-2.5 py-1 rounded-xl flex items-center space-x-1 font-medium shadow-2xs">
+                <span>Search: "<strong>{search}</strong>"</span>
+                <button 
+                  onClick={() => { 
+                    setSearch(''); 
+                    setPage(1); 
+                    fetchBooks(1, pageSize); 
+                  }} 
+                  className="hover:text-rose-600 font-bold ml-1 text-slate-400"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {selectedCategory && (
+              <span className="bg-[#fff0f7] text-[#670047] border border-[#ffb3d9] px-2.5 py-1 rounded-xl flex items-center space-x-1 font-medium shadow-2xs">
+                <span>Discipline: <strong>{categories.find(c => String(c.id) === String(selectedCategory))?.name || 'Selected Category'}</strong></span>
+                <button 
+                  onClick={() => handleCategoryChange('')} 
+                  className="hover:text-rose-600 font-bold ml-1 text-[#670047]"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {availableOnly && (
+              <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-xl flex items-center space-x-1 font-medium shadow-2xs">
+                <span>Available on Shelf Only</span>
+                <button 
+                  onClick={() => handleAvailableToggle(false)} 
+                  className="hover:text-rose-600 font-bold ml-1 text-emerald-700"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            <button
+              onClick={handleResetFilters}
+              className="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center space-x-1 ml-auto transition"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset All Filters</span>
+            </button>
+          </div>
+        )}
+
         {loading ? (
-          <div className="text-center py-20">
+          <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-xs">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#670047] border-t-transparent"></div>
             <p className="mt-2 text-xs text-slate-500 font-medium">Searching university library database...</p>
           </div>
         ) : books.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
-            <p className="text-slate-500 text-xs">No catalog titles found matching your search.</p>
+          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
+            <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-800 text-sm font-bold">No catalog titles found</p>
+            <p className="text-slate-500 text-xs mt-1">Try adjusting your keywords, discipline filter, or clearing the availability toggle.</p>
+            {(search || selectedCategory || availableOnly) && (
+              <button
+                onClick={handleResetFilters}
+                className="mt-4 px-4 py-2 bg-[#670047] text-white rounded-xl text-xs font-bold hover:bg-[#4b0150] transition shadow-xs"
+              >
+                Reset All Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -388,6 +593,105 @@ export default function CatalogPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Rich Pagination Bar (Supporting All 264+ Books) */}
+        {!loading && totalCount > 0 && (
+          <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-5 rounded-2xl shadow-xs border">
+            {/* Left: Summary and Page Size Selector */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+              <span>
+                Showing <strong className="text-slate-900 font-bold">{startIndex}</strong> to <strong className="text-slate-900 font-bold">{endIndex}</strong> of <strong className="text-[#670047] font-black">{totalCount}</strong> books
+              </span>
+              <span className="text-slate-300">|</span>
+              <div className="flex items-center space-x-1.5">
+                <span className="font-semibold text-slate-500">Items per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#670047]"
+                >
+                  <option value={12}>12 per page</option>
+                  <option value={24}>24 per page (Standard)</option>
+                  <option value={48}>48 per page</option>
+                  <option value={96}>96 per page</option>
+                  <option value={300}>All ({totalCount}) books</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Right: Page Navigation Buttons */}
+            <div className="flex items-center space-x-1.5">
+              {/* First Page */}
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={page === 1}
+                className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition"
+                title="First Page"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+
+              {/* Prev Page */}
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 1}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition text-xs font-bold flex items-center space-x-1"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Prev</span>
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center space-x-1">
+                {getPaginationItems().map((item, idx) => {
+                  if (item === '...') {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="px-2 py-1 text-xs text-slate-400 font-bold">
+                        …
+                      </span>
+                    );
+                  }
+                  const isCurrent = item === page;
+                  return (
+                    <button
+                      key={`page-${item}`}
+                      onClick={() => handlePageChange(item)}
+                      className={`min-w-[34px] h-[34px] rounded-xl text-xs font-bold transition flex items-center justify-center ${
+                        isCurrent
+                          ? 'bg-[#670047] text-[#ffcb00] shadow-md ring-2 ring-[#ffcb00]/50 scale-105'
+                          : 'border border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Next Page */}
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition text-xs font-bold flex items-center space-x-1"
+                title="Next Page"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Last Page */}
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={page >= totalPages}
+                className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition"
+                title="Last Page"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -499,7 +803,7 @@ export default function CatalogPage() {
             setBookToEdit(null);
           }}
           onSuccess={() => {
-            fetchBooks();
+            fetchBooks(page, pageSize);
           }}
         />
       )}

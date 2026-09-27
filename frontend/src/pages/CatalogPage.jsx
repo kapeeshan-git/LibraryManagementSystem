@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import BookFormModal from '../components/catalog/BookFormModal';
 import { 
   Search, 
   BookCheck, 
@@ -16,11 +17,15 @@ import {
   Repeat,
   QrCode,
   Sparkles,
-  Info
+  Info,
+  BookPlus,
+  Edit3,
+  Layers,
+  Barcode
 } from 'lucide-react';
 
 export default function CatalogPage() {
-  const { isAuthenticated, isStaff } = useAuth();
+  const { isAuthenticated, isStaff, isAdmin } = useAuth();
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
@@ -30,6 +35,10 @@ export default function CatalogPage() {
   const [selectedBook, setSelectedBook] = useState(null);
   const [reservationMessage, setReservationMessage] = useState({ text: '', type: '' });
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Add / Edit Book Modal state
+  const [bookModalOpen, setBookModalOpen] = useState(false);
+  const [bookToEdit, setBookToEdit] = useState(null);
 
   useEffect(() => {
     fetchCategories();
@@ -136,7 +145,7 @@ export default function CatalogPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by Title, Author, ISBN, Subject, or Shelf..."
+                placeholder="Search by Title, Author, ISBN, Subject, Call No., or Shelf..."
                 className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white text-slate-900 placeholder-slate-400 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-[#ffcb00]/50 shadow-lg"
               />
             </div>
@@ -177,7 +186,7 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      {/* Quick Services Grid (Reference from lib.cmb.ac.lk & vau.ac.lk) */}
+      {/* Quick Services Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Link
           to="/repository"
@@ -239,14 +248,31 @@ export default function CatalogPage() {
 
       {/* Book Collection Grid */}
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-lg font-black text-slate-900 tracking-tight">University Library Holdings</h2>
             <p className="text-xs text-slate-500">Showing catalog results for University of Vavuniya collections</p>
           </div>
-          <span className="text-xs font-bold text-[#670047] bg-[#fff0f7] px-3 py-1 rounded-full border border-[#ffb3d9]">
-            {books.length} Books Found
-          </span>
+          
+          <div className="flex items-center space-x-3">
+            <span className="text-xs font-bold text-[#670047] bg-[#fff0f7] px-3 py-1.5 rounded-full border border-[#ffb3d9]">
+              {books.length} Books Found
+            </span>
+
+            {/* Admin / Staff Add Book Button */}
+            {(isStaff || isAdmin) && (
+              <button
+                onClick={() => {
+                  setBookToEdit(null);
+                  setBookModalOpen(true);
+                }}
+                className="bg-[#670047] hover:bg-[#4b0150] text-white px-4 py-2 rounded-xl text-xs font-black flex items-center space-x-2 transition shadow-md hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <BookPlus className="w-4 h-4 text-[#ffcb00]" />
+                <span>+ Add Book (Barcode Req.)</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -296,6 +322,12 @@ export default function CatalogPage() {
                         <Tag className="w-3.5 h-3.5 text-slate-400" />
                         <span>ISBN: <strong className="font-mono text-slate-800">{book.isbn}</strong></span>
                       </div>
+                      {book.call_number && (
+                        <div className="flex items-center space-x-1.5">
+                          <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Call No: <strong className="font-mono text-[#670047] font-bold">{book.call_number}</strong></span>
+                        </div>
+                      )}
                       {book.shelf_location && (
                         <div className="flex items-center space-x-1.5">
                           <MapPin className="w-3.5 h-3.5 text-slate-400" />
@@ -311,7 +343,8 @@ export default function CatalogPage() {
                     )}
                   </div>
 
-                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                  {/* Card Actions */}
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
                     <button
                       onClick={() => {
                         setSelectedBook(book);
@@ -322,18 +355,35 @@ export default function CatalogPage() {
                       Copies ({book.total_copies_count})
                     </button>
 
-                    <button
-                      onClick={() => handlePlaceHold(book.id)}
-                      disabled={actionLoading}
-                      className={`text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5 transition shadow-xs ${
-                        isAvailable
-                          ? 'bg-[#670047] hover:bg-[#4b0150] text-white'
-                          : 'bg-[#1b3058] hover:bg-[#121e36] text-white'
-                      }`}
-                    >
-                      <Bookmark className="w-3.5 h-3.5 text-[#ffcb00]" />
-                      <span>{isAvailable ? 'Hold for Pickup' : 'Join Queue'}</span>
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      {/* Staff Edit Button */}
+                      {(isStaff || isAdmin) && (
+                        <button
+                          onClick={() => {
+                            setBookToEdit(book);
+                            setBookModalOpen(true);
+                          }}
+                          className="text-xs font-bold px-3 py-1.5 rounded-xl border border-[#670047]/30 text-[#670047] hover:bg-[#670047]/10 transition flex items-center space-x-1 shadow-2xs"
+                          title="Edit bibliographic details and manage copies/barcodes"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handlePlaceHold(book.id)}
+                        disabled={actionLoading}
+                        className={`text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5 transition shadow-xs ${
+                          isAvailable
+                            ? 'bg-[#670047] hover:bg-[#4b0150] text-white'
+                            : 'bg-[#1b3058] hover:bg-[#121e36] text-white'
+                        }`}
+                      >
+                        <Bookmark className="w-3.5 h-3.5 text-[#ffcb00]" />
+                        <span>{isAvailable ? 'Hold' : 'Queue'}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -349,7 +399,9 @@ export default function CatalogPage() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-base font-black text-slate-900">{selectedBook.title}</h3>
-                <p className="text-xs text-slate-500 font-mono mt-0.5">ISBN: {selectedBook.isbn} • {selectedBook.shelf_location}</p>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">
+                  ISBN: {selectedBook.isbn} {selectedBook.call_number && `• Call: ${selectedBook.call_number}`}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedBook(null)}
@@ -377,15 +429,20 @@ export default function CatalogPage() {
                   selectedBook.copies.map((copy) => (
                     <div key={copy.id} className="p-3 flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-mono font-bold text-[#670047]">{copy.accession_number}</div>
-                        <div className="text-slate-500 text-[11px]">Condition: {copy.condition_display}</div>
+                        <div className="font-mono font-bold text-[#670047] flex items-center space-x-1.5">
+                          <Barcode className="w-3.5 h-3.5" />
+                          <span>{copy.accession_number}</span>
+                        </div>
+                        <div className="text-slate-500 text-[11px]">
+                          Type: {copy.item_type_display || copy.item_type} • Condition: {copy.condition_display || copy.condition}
+                        </div>
                       </div>
                       <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
                         copy.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-800' :
                         copy.status === 'BORROWED' ? 'bg-amber-100 text-amber-800' :
                         copy.status === 'ON_HOLD' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'
                       }`}>
-                        {copy.status_display}
+                        {copy.status_display || copy.status}
                       </span>
                     </div>
                   ))
@@ -395,23 +452,56 @@ export default function CatalogPage() {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2 pt-2">
-              <button
-                onClick={() => setSelectedBook(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => handlePlaceHold(selectedBook.id)}
-                disabled={actionLoading}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#670047] hover:bg-[#4b0150] shadow"
-              >
-                {selectedBook.available_copies_count > 0 ? 'Place Desk Hold' : 'Join Waitlist'}
-              </button>
+            <div className="flex items-center justify-between pt-2">
+              <div>
+                {(isStaff || isAdmin) && (
+                  <button
+                    onClick={() => {
+                      setBookToEdit(selectedBook);
+                      setSelectedBook(null);
+                      setBookModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold text-[#670047] border border-[#670047]/40 hover:bg-[#670047]/10 flex items-center space-x-1.5 transition"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit & Manage Barcodes</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setSelectedBook(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => handlePlaceHold(selectedBook.id)}
+                  disabled={actionLoading}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#670047] hover:bg-[#4b0150] shadow"
+                >
+                  {selectedBook.available_copies_count > 0 ? 'Place Desk Hold' : 'Join Waitlist'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add / Edit Book Form Modal */}
+      {bookModalOpen && (
+        <BookFormModal
+          book={bookToEdit}
+          categories={categories}
+          onClose={() => {
+            setBookModalOpen(false);
+            setBookToEdit(null);
+          }}
+          onSuccess={() => {
+            fetchBooks();
+          }}
+        />
       )}
     </div>
   );

@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import IdCardModal from '../components/common/IdCardModal';
 import QrBarcodeScanner from '../components/common/QrBarcodeScanner';
+import BookFormModal from '../components/catalog/BookFormModal';
 import { 
   Users, 
   Upload, 
@@ -21,12 +22,16 @@ import {
   Shield,
   Camera,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  BookPlus,
+  Barcode,
+  Layers,
+  Trash2
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const { user, isAdmin, isStaff } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'users', 'csv_import', 'fines_settle'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'catalog', 'users', 'csv_import', 'fines_settle'
   const [metrics, setMetrics] = useState(null);
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -34,6 +39,15 @@ export default function AdminDashboardPage() {
   const [userSearch, setUserSearch] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Catalog / Books Management State
+  const [adminBooks, setAdminBooks] = useState([]);
+  const [adminBookSearch, setAdminBookSearch] = useState('');
+  const [adminBookCategory, setAdminBookCategory] = useState('');
+  const [catalogCategories, setCatalogCategories] = useState([]);
+  const [adminBookLoading, setAdminBookLoading] = useState(false);
+  const [adminBookModalOpen, setAdminBookModalOpen] = useState(false);
+  const [adminBookToEdit, setAdminBookToEdit] = useState(null);
 
   // Modals
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
@@ -76,7 +90,46 @@ export default function AdminDashboardPage() {
     fetchDepartments();
     fetchUsers();
     fetchUnpaidFines();
-  }, [userSearch, selectedRole]);
+    fetchAdminBooks();
+    fetchCatalogCategories();
+  }, [userSearch, selectedRole, adminBookSearch, adminBookCategory]);
+
+  const fetchAdminBooks = async () => {
+    setAdminBookLoading(true);
+    try {
+      let url = `/catalog/books/?q=${encodeURIComponent(adminBookSearch)}`;
+      if (adminBookCategory) url += `&category=${adminBookCategory}`;
+      const res = await api.get(url);
+      setAdminBooks(res.data.results || res.data);
+    } catch (err) {
+      console.error('Failed to fetch admin books', err);
+    } finally {
+      setAdminBookLoading(false);
+    }
+  };
+
+  const fetchCatalogCategories = async () => {
+    try {
+      const res = await api.get('/catalog/categories/');
+      setCatalogCategories(res.data.results || res.data);
+    } catch (err) {
+      console.error('Failed to fetch categories', err);
+    }
+  };
+
+  const handleDeleteBook = async (book) => {
+    if (!window.confirm(`Are you sure you want to permanently delete "${book.title}" (ISBN: ${book.isbn}) and all associated physical copies?`)) {
+      return;
+    }
+    try {
+      await api.delete(`/catalog/books/${book.id}/`);
+      setUserFormSuccess(`Book "${book.title}" was successfully deleted.`);
+      fetchAdminBooks();
+      fetchMetrics();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Unable to delete book. Please check if any copies are currently borrowed.');
+    }
+  };
 
   const fetchMetrics = async () => {
     try {
@@ -308,7 +361,18 @@ export default function AdminDashboardPage() {
           <p className="text-slate-500 text-xs">University of Vavuniya Patron Accounts, Governance & Circulation Logs</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              setAdminBookToEdit(null);
+              setAdminBookModalOpen(true);
+            }}
+            className="flex items-center space-x-1.5 px-4 py-2 bg-[#ffcb00] hover:bg-[#e5b600] text-[#4b0150] rounded-xl text-xs font-black shadow transition hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <BookPlus className="w-4 h-4 text-[#4b0150]" />
+            <span>+ Add Book (Barcode Req.)</span>
+          </button>
+
           <button
             onClick={openAddUser}
             className="flex items-center space-x-1.5 px-4 py-2 bg-[#670047] hover:bg-[#520038] text-white rounded-xl text-xs font-bold shadow transition"
@@ -335,28 +399,35 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex space-x-2 border-b border-slate-200 mb-6 text-xs font-bold">
+      <div className="flex space-x-2 border-b border-slate-200 mb-6 text-xs font-bold overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`py-3 px-4 border-b-2 transition ${activeTab === 'overview' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
+          className={`py-3 px-4 border-b-2 transition whitespace-nowrap ${activeTab === 'overview' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
         >
           Metrics & Overview
         </button>
         <button
+          onClick={() => setActiveTab('catalog')}
+          className={`py-3 px-4 border-b-2 transition whitespace-nowrap flex items-center space-x-1.5 ${activeTab === 'catalog' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Catalog & Holdings ({adminBooks.length})</span>
+        </button>
+        <button
           onClick={() => setActiveTab('users')}
-          className={`py-3 px-4 border-b-2 transition ${activeTab === 'users' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
+          className={`py-3 px-4 border-b-2 transition whitespace-nowrap ${activeTab === 'users' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
         >
           Patrons & Users ({users.length})
         </button>
         <button
           onClick={() => setActiveTab('csv_import')}
-          className={`py-3 px-4 border-b-2 transition ${activeTab === 'csv_import' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
+          className={`py-3 px-4 border-b-2 transition whitespace-nowrap ${activeTab === 'csv_import' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
         >
           CSV Batch Import
         </button>
         <button
           onClick={() => setActiveTab('fines_settle')}
-          className={`py-3 px-4 border-b-2 transition ${activeTab === 'fines_settle' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
+          className={`py-3 px-4 border-b-2 transition whitespace-nowrap ${activeTab === 'fines_settle' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
         >
           Settle Fines ({unpaidFines.length})
         </button>
@@ -387,6 +458,170 @@ export default function AdminDashboardPage() {
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Research Papers</div>
             <div className="text-2xl font-black text-blue-700 mt-1">{metrics.total_research_papers}</div>
             <div className="text-[11px] text-amber-600 font-bold mt-1">{metrics.pending_papers_for_review} pending peer review</div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: CATALOG & BOOKS MANAGEMENT */}
+      {activeTab === 'catalog' && (
+        <div className="space-y-6">
+          {/* Quick Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Catalog Titles</div>
+                <div className="text-2xl font-black text-slate-900 mt-0.5">{adminBooks.length}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Unique bibliographic records</div>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-[#670047]/10 text-[#670047] flex items-center justify-center font-bold">
+                <BookOpen className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Physical Copies</div>
+                <div className="text-2xl font-black text-[#670047] mt-0.5">
+                  {adminBooks.reduce((sum, b) => sum + (b.total_copies_count || 0), 0)}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">Barcoded accessions in stacks</div>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-[#ffcb00]/20 text-[#670047] flex items-center justify-center font-bold">
+                <Layers className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Available on Shelf</div>
+                <div className="text-2xl font-black text-emerald-600 mt-0.5">
+                  {adminBooks.reduce((sum, b) => sum + (b.available_copies_count || 0), 0)}
+                </div>
+                <div className="text-[11px] text-emerald-600 font-semibold mt-0.5">Ready for circulation</div>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Search, Filter & Add Button Bar */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between gap-3">
+            <div className="flex flex-col sm:flex-row gap-2.5 flex-1">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={adminBookSearch}
+                  onChange={(e) => setAdminBookSearch(e.target.value)}
+                  placeholder="Filter by title, ISBN, author, call no., or shelf location..."
+                  className="w-full pl-10 pr-3.5 py-2.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#670047]"
+                />
+              </div>
+
+              <select
+                value={adminBookCategory}
+                onChange={(e) => setAdminBookCategory(e.target.value)}
+                className="px-3.5 py-2.5 text-xs border border-slate-300 rounded-xl focus:outline-none bg-white font-medium text-slate-700"
+              >
+                <option value="">All Academic Disciplines</option>
+                {catalogCategories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => {
+                setAdminBookToEdit(null);
+                setAdminBookModalOpen(true);
+              }}
+              className="bg-[#670047] hover:bg-[#4b0150] text-white px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center space-x-2 transition shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <BookPlus className="w-4 h-4 text-[#ffcb00]" />
+              <span>+ Add Book (Barcode Req.)</span>
+            </button>
+          </div>
+
+          {/* Books Holdings Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            {adminBookLoading ? (
+              <div className="p-12 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-[#670047] border-t-transparent"></div>
+                <p className="text-xs text-slate-500 mt-2 font-medium">Loading catalog holdings...</p>
+              </div>
+            ) : adminBooks.length === 0 ? (
+              <div className="p-12 text-center">
+                <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-bold text-slate-700">No books found in catalog</p>
+                <p className="text-xs text-slate-400 mt-1">Try modifying your search or click "+ Add Book" to catalog a new acquisition.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 uppercase border-b border-slate-200 font-bold tracking-wider text-[11px]">
+                    <tr>
+                      <th className="p-3.5">Title & Bibliographic Record</th>
+                      <th className="p-3.5">Call No & Shelf</th>
+                      <th className="p-3.5">Category</th>
+                      <th className="p-3.5 text-center">Physical Copies</th>
+                      <th className="p-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {adminBooks.map((b) => (
+                      <tr key={b.id} className="hover:bg-slate-50/80 transition">
+                        <td className="p-3.5">
+                          <div className="font-bold text-slate-900 text-sm">{b.title}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            By {b.authors?.map(a => a.name).join(', ') || 'Unknown'} • ISBN: <span className="font-mono font-semibold text-slate-700">{b.isbn}</span>
+                          </div>
+                        </td>
+                        <td className="p-3.5 font-mono">
+                          <div className="text-[#670047] font-bold text-xs">{b.call_number || '—'}</div>
+                          <div className="text-[11px] text-slate-500">{b.shelf_location || 'Stacks'}</div>
+                        </td>
+                        <td className="p-3.5">
+                          <span className="bg-[#fff0f7] text-[#670047] border border-[#ffb3d9] px-2 py-0.5 rounded-md font-bold text-[10px]">
+                            {b.category_name || 'Academic'}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-center">
+                          <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] inline-flex items-center space-x-1 ${
+                            b.available_copies_count > 0 
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}>
+                            <span>{b.available_copies_count} / {b.total_copies_count} Available</span>
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                          <button
+                            onClick={() => {
+                              setAdminBookToEdit(b);
+                              setAdminBookModalOpen(true);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg border border-[#670047]/30 text-[#670047] hover:bg-[#670047]/10 font-bold text-xs inline-flex items-center space-x-1 transition"
+                            title="Edit metadata and manage barcodes"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit Catalog</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteBook(b)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            title="Delete book"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1021,6 +1256,22 @@ export default function AdminDashboardPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Book Form Modal (Add / Edit) */}
+      {adminBookModalOpen && (
+        <BookFormModal
+          book={adminBookToEdit}
+          categories={catalogCategories}
+          onClose={() => {
+            setAdminBookModalOpen(false);
+            setAdminBookToEdit(null);
+          }}
+          onSuccess={() => {
+            fetchAdminBooks();
+            fetchMetrics();
+          }}
+        />
       )}
     </div>
   );

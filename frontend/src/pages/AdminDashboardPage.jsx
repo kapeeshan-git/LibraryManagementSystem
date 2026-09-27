@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import IdCardModal from '../components/common/IdCardModal';
+import QrBarcodeScanner from '../components/common/QrBarcodeScanner';
 import { 
   Users, 
   Upload, 
@@ -16,10 +18,14 @@ import {
   Edit3, 
   QrCode, 
   KeyRound, 
-  Shield 
+  Shield,
+  Camera,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
+  const { user, isAdmin, isStaff } = useAuth();
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'users', 'csv_import', 'fines_settle'
   const [metrics, setMetrics] = useState(null);
   const [users, setUsers] = useState([]);
@@ -33,6 +39,8 @@ export default function AdminDashboardPage() {
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
   const [editUserModalUser, setEditUserModalUser] = useState(null);
   const [idCardModalUser, setIdCardModalUser] = useState(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isRegScanned, setIsRegScanned] = useState(false);
 
   // User Form State (Add / Edit)
   const [userFormData, setUserFormData] = useState({
@@ -140,13 +148,36 @@ export default function AdminDashboardPage() {
       password: '',
       is_active_patron: true,
     });
+    setIsRegScanned(false);
     setUserFormError('');
     setAddUserModalOpen(true);
+  };
+
+  const handleRegScanSuccess = (scannedCode) => {
+    const clean = scannedCode.trim();
+    setUserFormData((prev) => ({
+      ...prev,
+      reg_number: clean,
+    }));
+    setIsRegScanned(true);
+    setIsScannerOpen(false);
   };
 
   // Submit Add User
   const handleAddUserSubmit = async (e) => {
     e.preventDefault();
+
+    // Verify mandatory scan rule for library staff (admin can bypass)
+    if (!isAdmin && !isRegScanned) {
+      setUserFormError("Library Staff must scan the patron's physical university ID card to obtain the Registration Number.");
+      return;
+    }
+
+    if (!userFormData.reg_number.trim()) {
+      setUserFormError("Registration No / Staff ID is required.");
+      return;
+    }
+
     setUserFormLoading(true);
     setUserFormError('');
 
@@ -254,6 +285,15 @@ export default function AdminDashboardPage() {
         <IdCardModal
           user={idCardModalUser}
           onClose={() => setIdCardModalUser(null)}
+        />
+      )}
+
+      {/* ID Card Scanner for Patron Registration */}
+      {isScannerOpen && (
+        <QrBarcodeScanner
+          title="Scan Student / Staff Physical ID Card QR"
+          onScan={handleRegScanSuccess}
+          onClose={() => setIsScannerOpen(false)}
         />
       )}
 
@@ -633,31 +673,83 @@ export default function AdminDashboardPage() {
             )}
 
             <form onSubmit={handleAddUserSubmit} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Registration No / Staff ID *</label>
+              {/* Registration / ID Scanner Section */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="font-bold text-slate-700 block uppercase text-[11px]">
+                    Registration No / Staff ID *
+                  </label>
+                  {isAdmin ? (
+                    <span className="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full">
+                      Admin: Manual Input or Scan
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-full">
+                      Physical ID Card Scan Required
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative flex gap-2">
                   <input
                     type="text"
                     required
+                    readOnly={!isAdmin}
                     value={userFormData.reg_number}
-                    onChange={(e) => setUserFormData({ ...userFormData, reg_number: e.target.value })}
-                    placeholder="e.g. 2022/ICT/150"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    onChange={(e) => {
+                      if (isAdmin) {
+                        setUserFormData({ ...userFormData, reg_number: e.target.value });
+                      }
+                    }}
+                    placeholder={
+                      isAdmin
+                        ? "e.g. 2022/ICT/150 or scan physical card"
+                        : "Click 'Scan ID Card' to scan physical QR"
+                    }
+                    className={`flex-1 px-3 py-2 border rounded-lg font-mono text-xs ${
+                      !isAdmin
+                        ? 'bg-slate-100 text-slate-800 border-slate-300 font-bold cursor-not-allowed'
+                        : 'bg-white focus:ring-2 focus:ring-emerald-500'
+                    }`}
                   />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Role *</label>
-                  <select
-                    value={userFormData.role}
-                    onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
+
+                  <button
+                    type="button"
+                    onClick={() => setIsScannerOpen(true)}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow transition shrink-0"
                   >
-                    <option value="STUDENT">Student</option>
-                    <option value="LECTURER">Lecturer / Academic Staff</option>
-                    <option value="LIBRARIAN">Librarian</option>
-                    <option value="ADMIN">System Administrator</option>
-                  </select>
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>{userFormData.reg_number ? 'Re-scan ID' : 'Scan ID Card'}</span>
+                  </button>
                 </div>
+
+                {isRegScanned && (
+                  <div className="mt-2 flex items-center space-x-1.5 text-[11px] text-emerald-700 font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Verified from Physical University ID Card: {userFormData.reg_number}</span>
+                  </div>
+                )}
+
+                {!isAdmin && !isRegScanned && (
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 font-medium flex items-center space-x-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Library Staff rule: You must scan the patron's physical university ID card to register them.</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Patron Role *</label>
+                <select
+                  value={userFormData.role}
+                  onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="STUDENT">Student</option>
+                  <option value="LECTURER">Lecturer / Academic Staff</option>
+                  <option value="LIBRARIAN">Librarian</option>
+                  <option value="ADMIN">System Administrator</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -752,10 +844,18 @@ export default function AdminDashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={userFormLoading}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow"
+                  disabled={userFormLoading || (!isAdmin && !isRegScanned)}
+                  className={`px-5 py-2 text-white rounded-lg font-bold shadow transition ${
+                    !isAdmin && !isRegScanned
+                      ? 'bg-slate-300 cursor-not-allowed text-slate-500'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
                 >
-                  {userFormLoading ? 'Creating User...' : 'Create Account'}
+                  {userFormLoading
+                    ? 'Creating User...'
+                    : (!isAdmin && !isRegScanned
+                        ? 'Scan ID Card to Enable'
+                        : 'Create Account')}
                 </button>
               </div>
             </form>

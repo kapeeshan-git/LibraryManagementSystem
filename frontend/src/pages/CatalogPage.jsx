@@ -232,7 +232,7 @@ export default function CatalogPage() {
         <div className="flex items-center space-x-2">
           <Info className="w-4 h-4 text-[#670047] shrink-0" />
           <span className="font-semibold">
-            <strong>Library Notice:</strong> Physical checkouts require your Student/Staff University ID Card QR. Main Library open Monday to Friday 8:00 AM – 8:00 PM.
+            <strong>Library Notice:</strong> Physical checkouts require your Student/Staff University Physical ID Card (QR or Barcode). Main Library open Monday to Friday 8:00 AM – 8:00 PM.
           </span>
         </div>
         <span className="hidden md:inline font-mono font-bold text-[11px] bg-[#670047] text-[#ffcb00] px-2.5 py-0.5 rounded">
@@ -336,14 +336,14 @@ export default function CatalogPage() {
         </Link>
 
         <Link
-          to={isAuthenticated ? "/dashboard" : "/login"}
+          to="/services"
           className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-[#670047] shadow-xs hover:shadow-md transition group"
         >
           <div className="w-10 h-10 rounded-xl bg-[#ffcb00]/20 text-[#670047] flex items-center justify-center mb-3 group-hover:bg-[#ffcb00] transition">
             <QrCode className="w-5 h-5" />
           </div>
-          <h3 className="text-xs font-bold text-slate-900 group-hover:text-[#670047] transition">Digital Patron ID Card</h3>
-          <p className="text-[11px] text-slate-500 mt-1">Mobile QR card for book checkouts</p>
+          <h3 className="text-xs font-bold text-slate-900 group-hover:text-[#670047] transition">Physical ID Card Checkouts</h3>
+          <p className="text-[11px] text-slate-500 mt-1">Scan student / staff card at circulation desk</p>
         </Link>
 
         {isStaff ? (

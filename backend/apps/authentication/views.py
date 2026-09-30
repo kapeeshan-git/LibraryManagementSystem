@@ -77,17 +77,39 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='lookup')
     def lookup_patron(self, request):
-        """Lookup patron by ID card QR scan / reg_number and verify borrowing eligibility."""
+        """Lookup patron by ID card QR/barcode scan or reg_number and verify borrowing eligibility."""
         reg = request.query_params.get('reg_number', '').strip()
         if not reg:
             return Response({'error': 'Missing reg_number query parameter.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.filter(reg_number__iexact=reg).select_related('department').first()
+        # Sanitize physical ID scan if JSON or prefixed
+        cleaned_reg = reg
+        if cleaned_reg.startswith('{') and cleaned_reg.endswith('}'):
+            try:
+                import json
+                parsed = json.loads(cleaned_reg)
+                cleaned_reg = str(parsed.get('reg_number') or parsed.get('reg_no') or parsed.get('id') or parsed.get('username') or cleaned_reg).strip()
+            except Exception:
+                pass
+
+        import re
+        cleaned_reg = re.sub(
+            r'^(REGISTRATION\s*(?:NO|NUM|NUMBER)?|REG\s*(?:NO|NUM|NUMBER)?|STUDENT\s*ID|STAFF\s*ID|PATRON\s*ID|ID)[:\s\-]+',
+            '',
+            cleaned_reg,
+            flags=re.IGNORECASE
+        ).strip()
+
+        user = User.objects.filter(reg_number__iexact=cleaned_reg).select_related('department').first()
+        if not user and cleaned_reg != reg:
+            user = User.objects.filter(reg_number__iexact=reg).select_related('department').first()
         if not user:
+            user = User.objects.filter(username__iexact=cleaned_reg).select_related('department').first()
+        if not user and cleaned_reg != reg:
             user = User.objects.filter(username__iexact=reg).select_related('department').first()
 
         if not user:
-            return Response({'error': f"Patron with ID '{reg}' not found in university records."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': f"Patron with ID '{cleaned_reg}' not found in university records."}, status=status.HTTP_404_NOT_FOUND)
 
         from apps.circulation.models import BorrowRecord
         from apps.fines.models import Fine

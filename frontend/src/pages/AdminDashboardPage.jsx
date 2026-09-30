@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import IdCardModal from '../components/common/IdCardModal';
 import QrBarcodeScanner from '../components/common/QrBarcodeScanner';
 import BookFormModal from '../components/catalog/BookFormModal';
 import { 
@@ -60,7 +59,6 @@ export default function AdminDashboardPage() {
   // Modals
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
   const [editUserModalUser, setEditUserModalUser] = useState(null);
-  const [idCardModalUser, setIdCardModalUser] = useState(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isRegScanned, setIsRegScanned] = useState(false);
 
@@ -353,14 +351,6 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Digital ID Card Modal */}
-      {idCardModalUser && (
-        <IdCardModal
-          user={idCardModalUser}
-          onClose={() => setIdCardModalUser(null)}
-        />
-      )}
-
       {/* ID Card Scanner for Patron Registration */}
       {isScannerOpen && (
         <QrBarcodeScanner
@@ -801,21 +791,11 @@ export default function AdminDashboardPage() {
                       </span>
                     </td>
                     <td className="p-3 text-right space-x-2">
-                      {/* ID Card preview with QR code */}
-                      <button
-                        onClick={() => setIdCardModalUser(u)}
-                        title="View / Print Digital Library ID Card with QR"
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md font-semibold text-[11px] transition"
-                      >
-                        <QrCode className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>ID Card</span>
-                      </button>
-
                       {/* Edit User Button */}
                       <button
                         onClick={() => openEditUser(u)}
                         title="Edit User Information"
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md font-semibold text-[11px] transition"
+                        className="inline-flex items-center space-x-1 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg font-semibold text-xs transition"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                         <span>Edit</span>

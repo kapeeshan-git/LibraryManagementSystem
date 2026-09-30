@@ -58,7 +58,7 @@ export default function HomePage() {
               Notice
             </span>
             <span className="font-semibold text-xs truncate max-w-2xl">
-              Physical checkouts require your Student/Staff Digital QR Card. Main Library open Monday to Friday 8:00 AM – 8:00 PM.
+              Physical checkouts require your Student/Staff Physical University ID Card (QR / Barcode). Main Library open Monday to Friday 8:00 AM – 8:00 PM.
             </span>
           </div>
           <div className="flex items-center space-x-4 text-[11px] font-bold shrink-0">
@@ -591,15 +591,15 @@ export default function HomePage() {
               </h2>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                The Main Library operates extended hours to support continuous undergraduate and faculty research. Please present your digital ID card QR at the reception counter.
+                The Main Library operates extended hours to support continuous undergraduate and faculty research. Please present your physical student/staff ID card (QR or barcode) at the circulation desk.
               </p>
 
               <div className="pt-2">
                 <Link
-                  to="/dashboard"
+                  to="/catalog"
                   className="bg-[#670047] hover:bg-[#4b0150] text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center space-x-1.5 transition shadow"
                 >
-                  <span>View Your Digital ID Card QR</span>
+                  <span>Explore Library Catalog</span>
                   <ArrowRight className="w-3.5 h-3.5 text-[#ffcb00]" />
                 </Link>
               </div>
@@ -676,7 +676,7 @@ export default function HomePage() {
                 Library Orientation for 2025/2026 Undergraduate Intake
               </h3>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                Comprehensive induction sessions for newly enrolled students on OPAC search, digital ID QR cards, and library stacks discovery at Main Library Auditorium.
+                Comprehensive induction sessions for newly enrolled students on OPAC search, physical university ID card checkouts, and library stacks discovery at Main Library Auditorium.
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">

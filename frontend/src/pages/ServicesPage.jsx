@@ -143,7 +143,7 @@ export default function ServicesPage() {
                 </li>
                 <li className="flex items-center space-x-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Digital Patron ID Card QR checkouts at the circulation counter.</span>
+                  <span>Physical Student/Staff ID Card (QR or Barcode) checkouts at the circulation counter.</span>
                 </li>
               </ul>
             </div>

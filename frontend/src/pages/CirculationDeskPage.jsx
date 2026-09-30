@@ -204,10 +204,20 @@ export default function CirculationDeskPage() {
 
   // Handle Scan Callback
   const handleScanSuccess = (decodedText) => {
-    const cleanText = decodedText.trim();
+    let cleanText = String(decodedText || '').trim();
     if (scannerTarget === 'patron') {
+      // Clean scanned physical ID card QR/barcode
+      if (cleanText.startsWith('{') && cleanText.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(cleanText);
+          cleanText = String(parsed.reg_number || parsed.reg_no || parsed.id || parsed.username || cleanText).trim();
+        } catch (e) {}
+      }
+      cleanText = cleanText.replace(/^(ID|REG|REG\s*NO|STUDENT\s*ID|STAFF\s*ID)[:\s\-]+/i, '').trim();
+
       setPatronReg(cleanText);
       lookupPatron(cleanText);
+      showToast('info', `Scanned ID Card: ${cleanText}. Matching database records...`);
     } else if (scannerTarget === 'issue_book') {
       setIssueBarcode(cleanText);
       lookupCopy(cleanText);
@@ -693,11 +703,11 @@ export default function CirculationDeskPage() {
         {/* Global Quick Action Buttons */}
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => openScanner('patron', 'Scan Patron Library ID Card QR')}
+            onClick={() => openScanner('patron', 'Scan Physical Patron ID Card (QR / Barcode)')}
             className="flex items-center space-x-1.5 px-3 py-2 bg-[#670047] hover:bg-[#520038] text-white rounded-xl text-xs font-bold shadow-sm transition"
           >
             <QrCode className="w-4 h-4 text-[#ffcb00]" />
-            <span>Scan Patron ID</span>
+            <span>Scan Physical ID</span>
           </button>
           <button
             onClick={() => openScanner(activeTab === 'return' ? 'return_book' : 'issue_book', 'Scan Book Accession Barcode')}
@@ -806,16 +816,35 @@ export default function CirculationDeskPage() {
               <div className="flex justify-between items-center">
                 <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-2">
                   <User className="w-4 h-4 text-[#670047]" />
-                  <span>1. Enter / Scan Patron ID Card QR</span>
+                  <span>1. Scan Physical Patron ID Card (QR / Barcode)</span>
                 </h2>
-                <button
-                  type="button"
-                  onClick={() => openScanner('patron', 'Scan Patron Library ID Card QR')}
-                  className="flex items-center space-x-1 text-xs text-[#670047] hover:text-[#520038] font-bold"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Camera Scanner</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  {patronData && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPatronData(null);
+                        setPatronReg('');
+                        setPatronLookupError('');
+                        setBookCopyData(null);
+                        setIssueBarcode('');
+                        setIssueError('');
+                        setIssueSuccess('');
+                      }}
+                      className="px-2 py-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition"
+                    >
+                      Clear / Next Patron
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => openScanner('patron', 'Scan Physical Patron ID Card (QR / Barcode)')}
+                    className="flex items-center space-x-1 text-xs text-[#670047] hover:text-[#520038] font-bold"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Camera Scanner</span>
+                  </button>
+                </div>
               </div>
 
               <div className="relative">
@@ -823,7 +852,7 @@ export default function CirculationDeskPage() {
                   type="text"
                   value={patronReg}
                   onChange={(e) => setPatronReg(e.target.value)}
-                  placeholder="Scan physical ID card QR or type reg number (e.g. 2022/ICT/125)"
+                  placeholder="Scan physical ID card QR/barcode or enter reg number (e.g. 2022/ICT/125)"
                   className="w-full pl-3 pr-10 py-2.5 text-xs border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-[#670047] focus:outline-hidden"
                 />
                 {patronLookupLoading && (
@@ -843,6 +872,22 @@ export default function CirculationDeskPage() {
 
             {/* Step 2: Scan Book Accession Barcode */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              {patronData && patronData.can_borrow && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center space-x-2 font-bold animate-pulse">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>
+                    Patron Verified: Ready to scan book accession barcode to lend to {patronData.user.full_name || patronData.user.username}.
+                  </span>
+                </div>
+              )}
+              {patronData && !patronData.can_borrow && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center space-x-2 font-bold">
+                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                  <span>
+                    Patron borrowing is currently blocked. Please resolve outstanding issues or fines before lending.
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-2">
                   <Barcode className="w-4 h-4 text-[#670047]" />
@@ -1081,9 +1126,9 @@ export default function CirculationDeskPage() {
             ) : (
               <div className="h-72 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-slate-400 text-xs">
                 <QrCode className="w-10 h-10 text-slate-300 mb-3" />
-                <p className="font-semibold text-slate-600">Scan Patron ID Card QR Code</p>
+                <p className="font-semibold text-slate-600">Scan Physical Patron ID Card (QR / Barcode)</p>
                 <p className="text-[11px] text-slate-400 max-w-xs mt-1">
-                  Once scanned, patron category, borrowing quota, hold status, and current checkouts will appear automatically.
+                  Once scanned via webcam or USB barcode reader, patron category, borrowing quota, hold status, and current checkouts will appear automatically.
                 </p>
               </div>
             )}

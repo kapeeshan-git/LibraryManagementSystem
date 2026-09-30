@@ -52,6 +52,7 @@ export default function AdminDashboardPage() {
   const [adminBookLoading, setAdminBookLoading] = useState(false);
   const [adminBookModalOpen, setAdminBookModalOpen] = useState(false);
   const [adminBookToEdit, setAdminBookToEdit] = useState(null);
+  const [adminBookModalInitialTab, setAdminBookModalInitialTab] = useState('details');
   const [adminBookPage, setAdminBookPage] = useState(1);
   const [adminBookPageSize, setAdminBookPageSize] = useState(25);
   const [adminBookTotalCount, setAdminBookTotalCount] = useState(0);
@@ -555,12 +556,13 @@ export default function AdminDashboardPage() {
             <button
               onClick={() => {
                 setAdminBookToEdit(null);
+                setAdminBookModalInitialTab('details');
                 setAdminBookModalOpen(true);
               }}
               className="bg-[#670047] hover:bg-[#4b0150] text-white px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center space-x-2 transition shadow-sm hover:scale-[1.02] active:scale-[0.98]"
             >
               <BookPlus className="w-4 h-4 text-[#ffcb00]" />
-              <span>+ Add Book (Barcode Req.)</span>
+              <span>+ Add Book (Multi-Copy)</span>
             </button>
           </div>
 
@@ -608,18 +610,28 @@ export default function AdminDashboardPage() {
                           </span>
                         </td>
                         <td className="p-3.5 text-center">
-                          <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] inline-flex items-center space-x-1 ${
-                            b.available_copies_count > 0 
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                              : 'bg-amber-50 text-amber-800 border border-amber-200'
-                          }`}>
+                          <button
+                            onClick={() => {
+                              setAdminBookToEdit(b);
+                              setAdminBookModalInitialTab('copies');
+                              setAdminBookModalOpen(true);
+                            }}
+                            className={`px-2.5 py-1 rounded-full font-bold text-[11px] inline-flex items-center space-x-1 hover:scale-105 transition cursor-pointer ${
+                              b.available_copies_count > 0 
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100' 
+                                : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                            }`}
+                            title="Click to view, add, or edit physical copies"
+                          >
                             <span>{b.available_copies_count} / {b.total_copies_count} Available</span>
-                          </span>
+                            <span className="text-[10px] text-[#670047] font-black underline ml-1">+ Copies</span>
+                          </button>
                         </td>
                         <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
                           <button
                             onClick={() => {
                               setAdminBookToEdit(b);
+                              setAdminBookModalInitialTab('details');
                               setAdminBookModalOpen(true);
                             }}
                             className="px-2.5 py-1.5 rounded-lg border border-[#670047]/30 text-[#670047] hover:bg-[#670047]/10 font-bold text-xs inline-flex items-center space-x-1 transition"
@@ -1350,6 +1362,7 @@ export default function AdminDashboardPage() {
         <BookFormModal
           book={adminBookToEdit}
           categories={catalogCategories}
+          initialTab={adminBookModalInitialTab}
           onClose={() => {
             setAdminBookModalOpen(false);
             setAdminBookToEdit(null);

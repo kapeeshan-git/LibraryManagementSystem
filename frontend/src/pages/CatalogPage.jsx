@@ -56,6 +56,7 @@ export default function CatalogPage() {
   // Add / Edit Book Modal state
   const [bookModalOpen, setBookModalOpen] = useState(false);
   const [bookToEdit, setBookToEdit] = useState(null);
+  const [bookModalInitialTab, setBookModalInitialTab] = useState('details');
 
   useEffect(() => {
     fetchCategories();
@@ -762,6 +763,7 @@ export default function CatalogPage() {
                   <button
                     onClick={() => {
                       setBookToEdit(selectedBook);
+                      setBookModalInitialTab('copies');
                       setSelectedBook(null);
                       setBookModalOpen(true);
                     }}
@@ -798,6 +800,7 @@ export default function CatalogPage() {
         <BookFormModal
           book={bookToEdit}
           categories={categories}
+          initialTab={bookModalInitialTab}
           onClose={() => {
             setBookModalOpen(false);
             setBookToEdit(null);

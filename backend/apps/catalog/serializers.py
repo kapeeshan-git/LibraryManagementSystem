@@ -68,7 +68,7 @@ class BookSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
         allow_blank=True,
-        help_text="Accession number / barcode for the initial physical copy"
+        help_text="Accession number / barcode for single physical copy"
     )
     item_type = serializers.ChoiceField(
         choices=BookCopy.ItemType.choices,
@@ -87,6 +87,13 @@ class BookSerializer(serializers.ModelSerializer):
         required=False,
         allow_blank=True
     )
+    # Batch physical copies support
+    initial_copies = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False,
+        help_text="List of physical copies to create (each with accession_number, item_type, condition, notes)"
+    )
 
     class Meta:
         model = Book
@@ -96,21 +103,45 @@ class BookSerializer(serializers.ModelSerializer):
             'edition', 'call_number', 'shelf_location', 'description',
             'cover_image', 'available_copies_count', 'total_copies_count',
             'copies', 'accession_number', 'item_type', 'condition',
-            'copy_notes', 'created_at', 'updated_at'
+            'copy_notes', 'initial_copies', 'created_at', 'updated_at'
         ]
 
     def validate(self, attrs):
-        # When creating a new book, barcode (accession_number) is mandatory
+        # When creating a new book, at least one barcode is mandatory
         if self.instance is None:
+            initial_copies = attrs.get('initial_copies')
             accession_number = (attrs.get('accession_number') or '').strip()
-            if not accession_number:
-                raise serializers.ValidationError({
-                    'accession_number': 'Physical copy Barcode / Accession Number is required when cataloging a book.'
-                })
-            if BookCopy.objects.filter(accession_number__iexact=accession_number).exists():
-                raise serializers.ValidationError({
-                    'accession_number': f"Barcode / Accession Number '{accession_number}' is already registered."
-                })
+
+            if initial_copies and isinstance(initial_copies, list) and len(initial_copies) > 0:
+                if len(initial_copies) > 100:
+                    raise serializers.ValidationError({
+                        'initial_copies': 'Maximum 100 copies can be cataloged at once.'
+                    })
+                barcodes_seen = set()
+                for idx, copy_data in enumerate(initial_copies):
+                    bc = (copy_data.get('accession_number') or '').strip()
+                    if not bc:
+                        raise serializers.ValidationError({
+                            'initial_copies': f'Copy #{idx + 1} is missing an accession barcode.'
+                        })
+                    if bc.lower() in barcodes_seen:
+                        raise serializers.ValidationError({
+                            'initial_copies': f"Duplicate barcode '{bc}' specified in your copy list."
+                        })
+                    barcodes_seen.add(bc.lower())
+                    if BookCopy.objects.filter(accession_number__iexact=bc).exists():
+                        raise serializers.ValidationError({
+                            'initial_copies': f"Barcode '{bc}' is already registered to another copy in the library."
+                        })
+            else:
+                if not accession_number:
+                    raise serializers.ValidationError({
+                        'accession_number': 'Physical copy Barcode / Accession Number is required when cataloging a book.'
+                    })
+                if BookCopy.objects.filter(accession_number__iexact=accession_number).exists():
+                    raise serializers.ValidationError({
+                        'accession_number': f"Barcode / Accession Number '{accession_number}' is already registered."
+                    })
 
             isbn = (attrs.get('isbn') or '').strip()
             if not isbn:
@@ -128,6 +159,7 @@ class BookSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        initial_copies = validated_data.pop('initial_copies', None)
         author_names = validated_data.pop('author_names', '')
         authors = validated_data.pop('authors', [])
         accession_number = (validated_data.pop('accession_number', '') or '').strip()
@@ -149,8 +181,20 @@ class BookSerializer(serializers.ModelSerializer):
             if final_authors:
                 book.authors.set(final_authors)
 
-            # Create the required physical copy with the accession barcode
-            if accession_number:
+            # Create physical copies
+            if initial_copies and isinstance(initial_copies, list) and len(initial_copies) > 0:
+                for c in initial_copies:
+                    bc = (c.get('accession_number') or '').strip()
+                    if bc:
+                        BookCopy.objects.create(
+                            book=book,
+                            accession_number=bc,
+                            item_type=c.get('item_type') or BookCopy.ItemType.STANDARD,
+                            condition=c.get('condition') or BookCopy.Condition.GOOD,
+                            notes=c.get('notes') or c.get('copy_notes') or '',
+                            status=BookCopy.Status.AVAILABLE
+                        )
+            elif accession_number:
                 BookCopy.objects.create(
                     book=book,
                     accession_number=accession_number,

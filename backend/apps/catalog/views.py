@@ -2,14 +2,16 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.db.models import Q
+from django.db.models import Q, F, Sum
+from django.db import models
 from ulms_core.pagination import StandardResultsSetPagination
 from .models import Category, Author, Book, BookCopy
 from .serializers import (
     CategorySerializer,
     AuthorSerializer,
     BookSerializer,
-    BookCopySerializer
+    BookCopySerializer,
+    BookStatisticsItemSerializer
 )
 
 def is_staff_or_admin(user):
@@ -58,7 +60,7 @@ class BookViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'statistics']:
             return [AllowAny()]
         return [IsAuthenticated()]
 
@@ -73,6 +75,7 @@ class BookViewSet(viewsets.ModelViewSet):
         query = self.request.query_params.get('q')
         category_id = self.request.query_params.get('category')
         available_only = self.request.query_params.get('available') == 'true'
+        ordering = self.request.query_params.get('ordering')
 
         if query:
             qs = qs.filter(
@@ -83,13 +86,66 @@ class BookViewSet(viewsets.ModelViewSet):
                 Q(shelf_location__icontains=query)
             ).distinct()
 
+            # Increment search count for top matching results in real-time
+            try:
+                matching_ids = list(qs.values_list('id', flat=True)[:25])
+                if matching_ids:
+                    Book.objects.filter(id__in=matching_ids).update(search_count=F('search_count') + 1)
+            except Exception:
+                pass
+
         if category_id:
             qs = qs.filter(category_id=category_id)
 
         if available_only:
             qs = qs.filter(copies__status=BookCopy.Status.AVAILABLE).distinct()
 
+        if ordering:
+            allowed_orderings = [
+                '-borrow_count', 'borrow_count',
+                '-search_count', 'search_count',
+                '-hold_count', 'hold_count',
+                'title', '-title',
+                '-created_at', 'created_at',
+                'publication_year', '-publication_year'
+            ]
+            if ordering in allowed_orderings:
+                qs = qs.order_by(ordering)
+
         return qs
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        Book.objects.filter(pk=instance.pk).update(search_count=F('search_count') + 1)
+        instance.refresh_from_db(fields=['search_count'])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='statistics', permission_classes=[AllowAny])
+    def statistics(self, request):
+        """Returns top statistics for books: most borrowed, most searched, and most on hold."""
+        limit = min(int(request.query_params.get('limit', 10)), 50)
+        base_qs = Book.objects.select_related('category').prefetch_related('authors', 'copies')
+
+        most_borrowed = base_qs.order_by('-borrow_count', '-created_at')[:limit]
+        most_searched = base_qs.order_by('-search_count', '-created_at')[:limit]
+        most_held = base_qs.order_by('-hold_count', '-created_at')[:limit]
+
+        total_searches = Book.objects.aggregate(total=Sum('search_count'))['total'] or 0
+        total_borrows = Book.objects.aggregate(total=Sum('borrow_count'))['total'] or 0
+        total_holds = Book.objects.aggregate(total=Sum('hold_count'))['total'] or 0
+
+        return Response({
+            'most_borrowed': BookStatisticsItemSerializer(most_borrowed, many=True).data,
+            'most_searched': BookStatisticsItemSerializer(most_searched, many=True).data,
+            'most_held': BookStatisticsItemSerializer(most_held, many=True).data,
+            'summary': {
+                'total_searches': total_searches,
+                'total_borrows': total_borrows,
+                'total_holds': total_holds,
+                'total_titles': Book.objects.count()
+            }
+        })
 
     def destroy(self, request, *args, **kwargs):
         book = self.get_object()

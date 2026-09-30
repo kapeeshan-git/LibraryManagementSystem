@@ -53,6 +53,10 @@ class DashboardMetricsView(APIView):
         active_reservations = Reservation.objects.filter(status__in=[Reservation.Status.PENDING, Reservation.Status.READY_FOR_PICKUP]).count()
         total_patrons = User.objects.filter(role__in=[User.Role.STUDENT, User.Role.LECTURER]).count()
 
+        total_catalog_searches = Book.objects.aggregate(total=Sum('search_count'))['total'] or 0
+        total_cumulative_borrows = Book.objects.aggregate(total=Sum('borrow_count'))['total'] or 0
+        total_cumulative_holds = Book.objects.aggregate(total=Sum('hold_count'))['total'] or 0
+
         return Response({
             'total_titles': total_books,
             'total_physical_copies': total_copies,
@@ -65,6 +69,9 @@ class DashboardMetricsView(APIView):
             'total_research_papers': total_papers,
             'pending_papers_for_review': pending_papers,
             'active_reservations': active_reservations,
+            'total_catalog_searches': total_catalog_searches,
+            'total_cumulative_borrows': total_cumulative_borrows,
+            'total_cumulative_holds': total_cumulative_holds,
         })
 
 

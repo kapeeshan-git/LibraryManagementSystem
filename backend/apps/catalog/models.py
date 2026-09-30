@@ -41,6 +41,21 @@ class Book(models.Model):
     )
     description = models.TextField(blank=True)
     cover_image = models.ImageField(upload_to='book_covers/', null=True, blank=True)
+    search_count = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        help_text=_("Total number of catalog searches and detail views for this book")
+    )
+    borrow_count = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        help_text=_("Total cumulative times physical copies of this book were checked out")
+    )
+    hold_count = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        help_text=_("Total cumulative hold and reservation requests placed for this book")
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

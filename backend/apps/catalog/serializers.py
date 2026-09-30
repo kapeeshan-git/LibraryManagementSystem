@@ -103,7 +103,24 @@ class BookSerializer(serializers.ModelSerializer):
             'edition', 'call_number', 'shelf_location', 'description',
             'cover_image', 'available_copies_count', 'total_copies_count',
             'copies', 'accession_number', 'item_type', 'condition',
-            'copy_notes', 'initial_copies', 'created_at', 'updated_at'
+            'copy_notes', 'initial_copies', 'search_count', 'borrow_count', 'hold_count',
+            'created_at', 'updated_at'
+        ]
+
+
+class BookStatisticsItemSerializer(serializers.ModelSerializer):
+    authors = AuthorSerializer(many=True, read_only=True)
+    category_name = serializers.ReadOnlyField(source='category.name')
+    available_copies_count = serializers.ReadOnlyField()
+    total_copies_count = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Book
+        fields = [
+            'id', 'title', 'isbn', 'authors', 'category_name',
+            'call_number', 'shelf_location', 'edition', 'publication_year',
+            'available_copies_count', 'total_copies_count',
+            'search_count', 'borrow_count', 'hold_count'
         ]
 
     def validate(self, attrs):

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { 
   Search, 
   BookOpen, 
@@ -10,6 +12,8 @@ import {
   MapPin, 
   Award, 
   CheckCircle2, 
+  CheckCircle,
+  AlertCircle,
   GraduationCap, 
   Printer, 
   ShieldCheck, 
@@ -24,13 +28,67 @@ import {
   Layers,
   Calendar,
   Building2,
-  Users
+  Users,
+  TrendingUp,
+  Flame
 } from 'lucide-react';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [activeSearchTab, setActiveSearchTab] = useState('opac'); // 'opac' | 'repository' | 'ebooks' | 'pastpapers'
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Book trends and statistics state
+  const [bookStats, setBookStats] = useState({ most_borrowed: [], most_searched: [], most_held: [], summary: {} });
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsTab, setStatsTab] = useState('borrowed'); // 'borrowed' | 'searched' | 'held'
+  const [holdToast, setHoldToast] = useState({ text: '', type: '' });
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      const res = await api.get('/catalog/books/statistics/?limit=6');
+      setBookStats(res.data);
+    } catch (err) {
+      console.error('Failed to load book statistics', err);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const handlePlaceHold = async (bookId, bookTitle = '') => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    setActionLoading(true);
+    setHoldToast({ text: '', type: '' });
+
+    try {
+      const res = await api.post('/reservations/place/', { book_id: bookId });
+      const titleLabel = bookTitle ? `"${bookTitle}"` : 'Book';
+      setHoldToast({
+        type: 'success',
+        text: res.data.status === 'READY_FOR_PICKUP'
+          ? `✓ Hold Placed for ${titleLabel}! A physical copy has been set aside at the circulation desk for 48 hours.`
+          : `✓ Added to Waitlist for ${titleLabel}! You are in position #${res.data.queue_position} in line.`
+      });
+      fetchStats();
+    } catch (err) {
+      setHoldToast({
+        type: 'error',
+        text: err.response?.data?.detail || err.response?.data?.[0] || 'Unable to place reservation.'
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -393,6 +451,207 @@ export default function HomePage() {
               <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition" />
             </span>
           </Link>
+
+        </div>
+      </section>
+
+      {/* 3.5. ACADEMIC TRENDS & POPULAR BOOKS (Most Borrowed, Most Searched, Most on Hold) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 md:p-10 shadow-xs space-y-6">
+          
+          {/* Toast Notification for Instant Hold / Queue Placement */}
+          {holdToast.text && (
+            <div className={`p-4 rounded-2xl border shadow-md flex items-center justify-between transition ${
+              holdToast.type === 'success'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                : 'bg-rose-50 border-rose-300 text-rose-900'
+            }`}>
+              <div className="flex items-center space-x-2 text-xs font-bold">
+                {holdToast.type === 'success' ? (
+                  <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                )}
+                <span>{holdToast.text}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHoldToast({ text: '', type: '' })}
+                className="text-xs font-black p-1 hover:bg-black/5 rounded-lg ml-4 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center space-x-2 bg-[#670047]/10 text-[#670047] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <TrendingUp className="w-3.5 h-3.5 text-[#670047]" />
+                <span>Academic Demand Analytics</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Trending Academic Books
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl">
+                Explore the most borrowed course textbooks, highly searched references, and popular hold waitlists. Click <strong>Add to Hold</strong> to reserve immediately.
+              </p>
+            </div>
+
+            <Link
+              to="/catalog"
+              className="text-xs font-black text-[#670047] hover:text-[#520038] flex items-center space-x-1 whitespace-nowrap self-start md:self-auto"
+            >
+              <span>Explore All 264+ Books in OPAC</span>
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Interactive Switcher */}
+          <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setStatsTab('borrowed')}
+              className={`flex items-center space-x-2 pb-3 px-3.5 text-xs font-bold border-b-2 transition whitespace-nowrap cursor-pointer ${
+                statsTab === 'borrowed'
+                  ? 'border-[#670047] text-[#670047]'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Flame className="w-4 h-4 text-rose-500" />
+              <span>🔥 Most Borrowed</span>
+              <span className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-black border border-rose-200">
+                Top Loans
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatsTab('searched')}
+              className={`flex items-center space-x-2 pb-3 px-3.5 text-xs font-bold border-b-2 transition whitespace-nowrap cursor-pointer ${
+                statsTab === 'searched'
+                  ? 'border-[#670047] text-[#670047]'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Search className="w-4 h-4 text-blue-500" />
+              <span>🔍 Most Searched</span>
+              <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-black border border-blue-200">
+                Catalog Interest
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatsTab('held')}
+              className={`flex items-center space-x-2 pb-3 px-3.5 text-xs font-bold border-b-2 transition whitespace-nowrap cursor-pointer ${
+                statsTab === 'held'
+                  ? 'border-[#670047] text-[#670047]'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Bookmark className="w-4 h-4 text-amber-500" />
+              <span>📌 Most on Hold</span>
+              <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-black border border-amber-200">
+                Waitlists
+              </span>
+            </button>
+          </div>
+
+          {/* Cards Grid */}
+          {statsLoading ? (
+            <div className="py-12 text-center text-xs text-slate-400">Loading trending books...</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {(statsTab === 'borrowed'
+                ? bookStats.most_borrowed
+                : statsTab === 'searched'
+                ? bookStats.most_searched
+                : bookStats.most_held
+              )?.slice(0, 6).map((b, idx) => {
+                const isAvailable = b.available_copies_count > 0;
+                return (
+                  <div
+                    key={b.id}
+                    className="bg-slate-50/70 hover:bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md hover:border-[#670047]/40 transition flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Badge row */}
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-md ${
+                          idx === 0
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : idx === 1
+                            ? 'bg-slate-200 text-slate-800 border border-slate-300'
+                            : idx === 2
+                            ? 'bg-orange-100 text-orange-900 border border-orange-300'
+                            : 'bg-white text-slate-600 border border-slate-200'
+                        }`}>
+                          #{idx + 1}
+                        </span>
+
+                        {statsTab === 'borrowed' && (
+                          <span className="text-[10px] font-black bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-md border border-rose-200 flex items-center gap-1">
+                            <Flame className="w-3 h-3 text-rose-600" />
+                            <span>{b.borrow_count} Loans</span>
+                          </span>
+                        )}
+                        {statsTab === 'searched' && (
+                          <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-md border border-blue-200 flex items-center gap-1">
+                            <Search className="w-3 h-3 text-blue-600" />
+                            <span>{b.search_count} Inquiries</span>
+                          </span>
+                        )}
+                        {statsTab === 'held' && (
+                          <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-1">
+                            <Bookmark className="w-3 h-3 text-amber-600" />
+                            <span>{b.hold_count} Holds Placed</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-sm font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-[#670047] transition">
+                        {b.title}
+                      </h3>
+
+                      <p className="text-xs text-slate-600 mt-1 truncate">
+                        By {b.authors?.map(a => a.name).join(', ') || 'Faculty Author'}
+                      </p>
+
+                      <div className="mt-3 text-[11px] text-slate-400 font-mono truncate">
+                        {b.call_number ? `Call: ${b.call_number}` : `ISBN: ${b.isbn}`}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        isAvailable
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        {isAvailable ? `${b.available_copies_count} on Shelf` : 'All Loaned'}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handlePlaceHold(b.id, b.title)}
+                        disabled={actionLoading}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-2xs transition cursor-pointer ${
+                          isAvailable
+                            ? 'bg-[#670047] hover:bg-[#520038] text-white'
+                            : 'bg-[#1b3058] hover:bg-[#121e36] text-white'
+                        }`}
+                        title={isAvailable ? 'Reserve 48-hr desk hold' : 'Join waitlist queue'}
+                      >
+                        <Bookmark className="w-3.5 h-3.5 text-[#ffcb00]" />
+                        <span>Add to Hold</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
         </div>
       </section>

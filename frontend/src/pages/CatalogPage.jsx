@@ -28,6 +28,9 @@ import {
   ChevronsRight,
   RotateCcw,
   SlidersHorizontal,
+  TrendingUp,
+  Flame,
+  Eye,
   X
 } from 'lucide-react';
 
@@ -48,6 +51,12 @@ export default function CatalogPage() {
   const [pageSize, setPageSize] = useState(24);
   const [totalCount, setTotalCount] = useState(0);
 
+  // Book trends and statistics state
+  const [bookStats, setBookStats] = useState({ most_borrowed: [], most_searched: [], most_held: [], summary: {} });
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsTab, setStatsTab] = useState('borrowed'); // 'borrowed' | 'searched' | 'held'
+  const [ordering, setOrdering] = useState(''); // '' | '-borrow_count' | '-search_count' | '-hold_count'
+
   // Selection & Modal States
   const [selectedBook, setSelectedBook] = useState(null);
   const [reservationMessage, setReservationMessage] = useState({ text: '', type: '' });
@@ -60,7 +69,20 @@ export default function CatalogPage() {
 
   useEffect(() => {
     fetchCategories();
+    fetchStatistics();
   }, []);
+
+  const fetchStatistics = async () => {
+    setStatsLoading(true);
+    try {
+      const res = await api.get('/catalog/books/statistics/?limit=8');
+      setBookStats(res.data);
+    } catch (err) {
+      console.error('Failed to load book statistics', err);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   // Sync state if URL query changes externally
   useEffect(() => {
@@ -79,10 +101,10 @@ export default function CatalogPage() {
     }
   }, [searchParams]);
 
-  // Fetch books whenever page, pageSize, category, or availability changes
+  // Fetch books whenever page, pageSize, category, availability, or ordering changes
   useEffect(() => {
     fetchBooks(page, pageSize);
-  }, [page, pageSize, selectedCategory, availableOnly]);
+  }, [page, pageSize, selectedCategory, availableOnly, ordering]);
 
   const fetchCategories = async () => {
     try {
@@ -100,6 +122,7 @@ export default function CatalogPage() {
       if (search.trim()) url += `&q=${encodeURIComponent(search.trim())}`;
       if (selectedCategory) url += `&category=${selectedCategory}`;
       if (availableOnly) url += `&available=true`;
+      if (ordering) url += `&ordering=${ordering}`;
       
       const res = await api.get(url);
       const items = res.data.results || (Array.isArray(res.data) ? res.data : []);
@@ -198,9 +221,9 @@ export default function CatalogPage() {
     return items;
   };
 
-  const handlePlaceHold = async (bookId) => {
+  const handlePlaceHold = async (bookId, bookTitle = '') => {
     if (!isAuthenticated) {
-      alert('Please sign in to place a book hold or join the reservation waitlist.');
+      alert('Please sign in to your university library account to place a book hold or join the reservation queue.');
       return;
     }
     setActionLoading(true);
@@ -208,13 +231,15 @@ export default function CatalogPage() {
 
     try {
       const res = await api.post('/reservations/place/', { book_id: bookId });
+      const titleLabel = bookTitle ? `"${bookTitle}"` : 'Book';
       setReservationMessage({
         type: 'success',
         text: res.data.status === 'READY_FOR_PICKUP'
-          ? `Hold Placed! A copy has been set aside at the library desk for 48 hours.`
-          : `Reserved! You are in position #${res.data.queue_position} in line.`
+          ? `✓ Hold Placed for ${titleLabel}! A physical copy has been set aside at the circulation desk for 48 hours.`
+          : `✓ Added to Waitlist for ${titleLabel}! You are in position #${res.data.queue_position} in line.`
       });
       fetchBooks(page, pageSize);
+      fetchStatistics();
     } catch (err) {
       setReservationMessage({
         type: 'error',
@@ -227,6 +252,30 @@ export default function CatalogPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+      {/* Floating / Sticky Alert for Holds & Reservations */}
+      {reservationMessage.text && (
+        <div className={`p-4 rounded-2xl border shadow-md flex items-center justify-between transition animate-in fade-in slide-in-from-top-2 duration-200 ${
+          reservationMessage.type === 'success'
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+            : 'bg-rose-50 border-rose-300 text-rose-900'
+        }`}>
+          <div className="flex items-center space-x-2 text-xs font-bold">
+            {reservationMessage.type === 'success' ? (
+              <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            )}
+            <span>{reservationMessage.text}</span>
+          </div>
+          <button
+            onClick={() => setReservationMessage({ text: '', type: '' })}
+            className="text-xs font-black p-1 hover:bg-black/5 rounded-lg ml-4 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Notice Banner (Inspired by lib.cmb.ac.lk & vau.ac.lk) */}
       <div className="bg-[#fff9e6] border-l-4 border-[#ffcb00] p-3.5 rounded-xl shadow-xs flex items-center justify-between text-xs text-[#670047]">
         <div className="flex items-center space-x-2">
@@ -382,6 +431,193 @@ export default function CatalogPage() {
         </div>
       </div>
 
+      {/* 3. BOOK TRENDS & CIRCULATION STATISTICS (Most Borrowed, Most Searched, Most on Hold) */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-xs space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-xl bg-[#670047] flex items-center justify-center text-[#ffcb00] shadow-2xs">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                Library Trends & Book Statistics
+              </h2>
+              <span className="text-[10px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200 uppercase">
+                Live Demand
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Top circulated academic titles, frequent catalog inquiries, and high-demand hold queues across University of Vavuniya. Click <strong>Add to Hold</strong> on any book to reserve immediately.
+            </p>
+          </div>
+
+          {/* Quick Metrics Counter Pills */}
+          {bookStats.summary && (
+            <div className="flex items-center gap-2 text-xs flex-wrap">
+              <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <span className="text-slate-400 text-[10px] font-bold uppercase block">Total Borrows</span>
+                <span className="font-black text-[#670047]">{(bookStats.summary.total_borrows || 0).toLocaleString()}</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <span className="text-slate-400 text-[10px] font-bold uppercase block">Catalog Searches</span>
+                <span className="font-black text-[#1b3058]">{(bookStats.summary.total_searches || 0).toLocaleString()}</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <span className="text-slate-400 text-[10px] font-bold uppercase block">Holds Placed</span>
+                <span className="font-black text-amber-700">{(bookStats.summary.total_holds || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex border-b border-slate-200 gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setStatsTab('borrowed')}
+            className={`flex items-center space-x-2 pb-3 px-3 text-xs font-bold border-b-2 transition whitespace-nowrap cursor-pointer ${
+              statsTab === 'borrowed'
+                ? 'border-[#670047] text-[#670047]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Flame className="w-4 h-4 text-rose-500" />
+            <span>🔥 Most Borrowed</span>
+            <span className="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-black border border-rose-200">
+              Circulation Top
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatsTab('searched')}
+            className={`flex items-center space-x-2 pb-3 px-3 text-xs font-bold border-b-2 transition whitespace-nowrap cursor-pointer ${
+              statsTab === 'searched'
+                ? 'border-[#670047] text-[#670047]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Search className="w-4 h-4 text-blue-500" />
+            <span>🔍 Most Searched</span>
+            <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-black border border-blue-200">
+              High Inquiry
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatsTab('held')}
+            className={`flex items-center space-x-2 pb-3 px-3 text-xs font-bold border-b-2 transition whitespace-nowrap cursor-pointer ${
+              statsTab === 'held'
+                ? 'border-[#670047] text-[#670047]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Bookmark className="w-4 h-4 text-amber-500" />
+            <span>📌 Most on Hold</span>
+            <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-black border border-amber-200">
+              Active Waitlists
+            </span>
+          </button>
+        </div>
+
+        {/* Tab Cards Content */}
+        {statsLoading ? (
+          <div className="py-8 text-center text-xs text-slate-400">Loading library statistics...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {(statsTab === 'borrowed'
+              ? bookStats.most_borrowed
+              : statsTab === 'searched'
+              ? bookStats.most_searched
+              : bookStats.most_held
+            )?.slice(0, 8).map((b, idx) => {
+              const isAvailable = b.available_copies_count > 0;
+              return (
+                <div
+                  key={b.id}
+                  className="bg-slate-50 rounded-2xl border border-slate-200 p-4 hover:shadow-md hover:border-[#670047]/40 transition flex flex-col justify-between relative group"
+                >
+                  <div>
+                    {/* Top Row: Rank & Metric Badge */}
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                        idx === 0
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                          : idx === 1
+                          ? 'bg-slate-200 text-slate-800 border border-slate-300'
+                          : idx === 2
+                          ? 'bg-orange-100 text-orange-900 border border-orange-300'
+                          : 'bg-white text-slate-600 border border-slate-200'
+                      }`}>
+                        #{idx + 1}
+                      </span>
+
+                      {statsTab === 'borrowed' && (
+                        <span className="text-[10px] font-black bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md border border-rose-200 flex items-center gap-1">
+                          <Flame className="w-3 h-3 text-rose-600" />
+                          <span>{b.borrow_count} Loans</span>
+                        </span>
+                      )}
+                      {statsTab === 'searched' && (
+                        <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md border border-blue-200 flex items-center gap-1">
+                          <Search className="w-3 h-3 text-blue-600" />
+                          <span>{b.search_count} Searches</span>
+                        </span>
+                      )}
+                      {statsTab === 'held' && (
+                        <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md border border-amber-200 flex items-center gap-1">
+                          <Bookmark className="w-3 h-3 text-amber-600" />
+                          <span>{b.hold_count} Holds</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 className="text-xs font-black text-slate-900 leading-snug line-clamp-2 hover:text-[#670047] transition">
+                      {b.title}
+                    </h4>
+
+                    <p className="text-[11px] text-slate-500 mt-1 truncate">
+                      {b.authors?.map(a => a.name).join(', ') || 'Faculty / Author'}
+                    </p>
+
+                    <div className="mt-2 text-[10px] text-slate-400 font-mono truncate">
+                      {b.call_number ? `Call: ${b.call_number}` : `ISBN: ${b.isbn}`}
+                    </div>
+                  </div>
+
+                  {/* Card Bottom: Availability & Add to Hold Button */}
+                  <div className="mt-3.5 pt-2.5 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                      isAvailable
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {isAvailable ? `${b.available_copies_count} on Shelf` : 'All Loaned'}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePlaceHold(b.id, b.title)}
+                      disabled={actionLoading}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center space-x-1 shadow-2xs transition cursor-pointer ${
+                        isAvailable
+                          ? 'bg-[#670047] hover:bg-[#520038] text-white'
+                          : 'bg-[#1b3058] hover:bg-[#121e36] text-white'
+                      }`}
+                      title={isAvailable ? 'Reserve immediate 48-hr desk hold' : 'Join FIFO waitlist queue'}
+                    >
+                      <Bookmark className="w-3 h-3 text-[#ffcb00]" />
+                      <span>Add to Hold</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Book Collection Section */}
       <div id="catalog-results" className="scroll-mt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -411,6 +647,61 @@ export default function CatalogPage() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Quick Sort Filter Bar (Supports Sorting Entire Catalog by Statistics) */}
+        <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-white rounded-2xl border border-slate-200 text-xs shadow-2xs">
+          <span className="font-bold text-slate-500 text-[11px] uppercase tracking-wider flex items-center space-x-1">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+            <span>Sort Catalog:</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => { setOrdering(''); setPage(1); }}
+            className={`px-3 py-1.5 rounded-xl font-bold transition text-xs cursor-pointer ${
+              ordering === '' 
+                ? 'bg-slate-900 text-white shadow-xs' 
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            Title (A–Z)
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOrdering('-borrow_count'); setPage(1); }}
+            className={`px-3 py-1.5 rounded-xl font-bold transition text-xs flex items-center space-x-1.5 cursor-pointer ${
+              ordering === '-borrow_count' 
+                ? 'bg-[#670047] text-white shadow-xs' 
+                : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            <span>🔥 Most Borrowed</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOrdering('-search_count'); setPage(1); }}
+            className={`px-3 py-1.5 rounded-xl font-bold transition text-xs flex items-center space-x-1.5 cursor-pointer ${
+              ordering === '-search_count' 
+                ? 'bg-[#1b3058] text-white shadow-xs' 
+                : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>🔍 Most Searched</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOrdering('-hold_count'); setPage(1); }}
+            className={`px-3 py-1.5 rounded-xl font-bold transition text-xs flex items-center space-x-1.5 cursor-pointer ${
+              ordering === '-hold_count' 
+                ? 'bg-amber-600 text-white shadow-xs' 
+                : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+            }`}
+          >
+            <Bookmark className="w-3.5 h-3.5" />
+            <span>📌 High Hold Demand</span>
+          </button>
         </div>
 
         {/* Active Filters Display */}
@@ -523,6 +814,30 @@ export default function CatalogPage() {
                       By {book.authors?.map(a => a.name).join(', ') || 'Faculty / Author'}
                     </p>
 
+                    {/* Popularity Micro-Pills */}
+                    {(book.borrow_count > 0 || book.search_count > 0 || book.hold_count > 0) && (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap text-[10px] font-bold">
+                        {book.borrow_count > 0 && (
+                          <span className="bg-rose-50 text-rose-700 px-2 py-0.5 rounded-md border border-rose-100 flex items-center gap-1">
+                            <Flame className="w-2.5 h-2.5 text-rose-500" />
+                            <span>{book.borrow_count} loans</span>
+                          </span>
+                        )}
+                        {book.search_count > 0 && (
+                          <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md border border-blue-100 flex items-center gap-1">
+                            <Search className="w-2.5 h-2.5 text-blue-500" />
+                            <span>{book.search_count} views</span>
+                          </span>
+                        )}
+                        {book.hold_count > 0 && (
+                          <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md border border-amber-100 flex items-center gap-1">
+                            <Bookmark className="w-2.5 h-2.5 text-amber-500" />
+                            <span>{book.hold_count} holds</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="mt-4 space-y-1.5 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
                       <div className="flex items-center space-x-1.5">
                         <Tag className="w-3.5 h-3.5 text-slate-400" />
@@ -556,7 +871,7 @@ export default function CatalogPage() {
                         setSelectedBook(book);
                         setReservationMessage({ text: '', type: '' });
                       }}
-                      className="text-xs font-bold text-[#670047] hover:underline"
+                      className="text-xs font-bold text-[#670047] hover:underline cursor-pointer"
                     >
                       Copies ({book.total_copies_count})
                     </button>
@@ -569,7 +884,7 @@ export default function CatalogPage() {
                             setBookToEdit(book);
                             setBookModalOpen(true);
                           }}
-                          className="text-xs font-bold px-3 py-1.5 rounded-xl border border-[#670047]/30 text-[#670047] hover:bg-[#670047]/10 transition flex items-center space-x-1 shadow-2xs"
+                          className="text-xs font-bold px-3 py-1.5 rounded-xl border border-[#670047]/30 text-[#670047] hover:bg-[#670047]/10 transition flex items-center space-x-1 shadow-2xs cursor-pointer"
                           title="Edit bibliographic details and manage copies/barcodes"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -578,16 +893,17 @@ export default function CatalogPage() {
                       )}
 
                       <button
-                        onClick={() => handlePlaceHold(book.id)}
+                        onClick={() => handlePlaceHold(book.id, book.title)}
                         disabled={actionLoading}
-                        className={`text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5 transition shadow-xs ${
+                        className={`text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center space-x-1.5 transition shadow-xs cursor-pointer ${
                           isAvailable
                             ? 'bg-[#670047] hover:bg-[#4b0150] text-white'
                             : 'bg-[#1b3058] hover:bg-[#121e36] text-white'
                         }`}
+                        title={isAvailable ? 'Reserve 48-hr desk hold' : 'Join waitlist queue'}
                       >
                         <Bookmark className="w-3.5 h-3.5 text-[#ffcb00]" />
-                        <span>{isAvailable ? 'Hold' : 'Queue'}</span>
+                        <span>Add to Hold</span>
                       </button>
                     </div>
                   </div>

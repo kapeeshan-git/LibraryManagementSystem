@@ -3,7 +3,8 @@ from django.utils import timezone
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import get_user_model
-from apps.catalog.models import BookCopy
+from django.db import models
+from apps.catalog.models import Book, BookCopy
 from apps.reservations.models import Reservation
 from apps.fines.models import Fine
 from apps.notifications.models import Notification
@@ -126,6 +127,9 @@ class CirculationService:
 
         copy.status = BookCopy.Status.BORROWED
         copy.save()
+
+        # Update cumulative borrow count on book
+        Book.objects.filter(pk=copy.book_id).update(borrow_count=models.F('borrow_count') + 1)
 
         # 10. Dispatch notification
         Notification.objects.create(

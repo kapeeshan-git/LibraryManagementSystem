@@ -2,6 +2,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
+from django.db import models
 from apps.catalog.models import Book, BookCopy
 from apps.circulation.models import BorrowRecord
 from apps.notifications.models import Notification
@@ -82,6 +83,9 @@ class ReservationService:
                 message=f"You are #{reservation.queue_position} in line for '{book.title}'. You will be notified once a copy is returned.",
                 notification_type=Notification.NotificationType.GENERAL
             )
+
+        # Update cumulative hold / reservation count on book
+        Book.objects.filter(pk=book.id).update(hold_count=models.F('hold_count') + 1)
 
         return reservation
 

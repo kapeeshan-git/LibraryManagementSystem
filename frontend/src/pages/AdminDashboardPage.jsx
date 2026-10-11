@@ -1,4 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { Suspense, lazy } from 'react';
+
+// Lazy loading the massive admin sub-components
+const OverviewTab = lazy(() => import('../components/admin/OverviewTab'));
+const BackupsTab = lazy(() => import('../components/admin/BackupsTab'));
+const CustomFieldsTab = lazy(() => import('../components/admin/CustomFieldsTab'));
+
+const TabLoader = () => (
+  <div className="flex justify-center items-center py-20">
+    <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-400 border-t-slate-800"></div>
+  </div>
+);
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import QrBarcodeScanner from '../components/common/QrBarcodeScanner';
@@ -31,7 +43,17 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Flame,
-  Bookmark
+  Bookmark,
+  HardDrive,
+  Cloud,
+  Clock,
+  RefreshCw,
+  FolderArchive,
+  Settings2,
+  Play,
+  XCircle,
+  Check,
+  Info
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -75,6 +97,7 @@ export default function AdminDashboardPage() {
     department: '',
     password: '',
     is_active_patron: true,
+    custom_fields: {},
   });
   const [userFormLoading, setUserFormLoading] = useState(false);
   const [userFormError, setUserFormError] = useState('');
@@ -95,6 +118,28 @@ export default function AdminDashboardPage() {
 
   // Book Statistics State
   const [bookStats, setBookStats] = useState({ most_borrowed: [], most_searched: [], most_held: [], summary: {} });
+
+  // Backup System State
+  const [backupStats, setBackupStats] = useState(null);
+  const [backupRecords, setBackupRecords] = useState([]);
+  const [backupConfigs, setBackupConfigs] = useState({});
+  const [backupConfigEditing, setBackupConfigEditing] = useState(null); // 'library' or 'repository'
+  const [backupConfigForm, setBackupConfigForm] = useState({});
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupTriggerLoading, setBackupTriggerLoading] = useState({});
+  const [backupMsg, setBackupMsg] = useState({ type: '', text: '' });
+
+  // Custom Fields State
+  const [customFields, setCustomFields] = useState([]);
+  const [customFieldForm, setCustomFieldForm] = useState({
+    entity_type: 'USER',
+    name: '',
+    field_type: 'TEXT',
+    options: [],
+    is_required: false
+  });
+  const [isEditingCustomField, setIsEditingCustomField] = useState(false);
+  const [customFieldMsg, setCustomFieldMsg] = useState({ type: '', text: '' });
 
   const fetchBookStats = async () => {
     try {
@@ -215,6 +260,7 @@ export default function AdminDashboardPage() {
       is_active_patron: user.is_active_patron,
       debarment_reason: user.debarment_reason || '',
       staff_notes: user.staff_notes || '',
+      custom_fields: user.custom_fields || {},
     });
     setUserFormError('');
   };
@@ -233,6 +279,7 @@ export default function AdminDashboardPage() {
       is_active_patron: true,
       debarment_reason: '',
       staff_notes: '',
+      custom_fields: {},
     });
     setIsRegScanned(false);
     setUserFormError('');
@@ -364,6 +411,176 @@ export default function AdminDashboardPage() {
     window.open('/api/reports/export/circulation/', '_blank');
   };
 
+  // ====== BACKUP FUNCTIONS ======
+  const fetchBackupStats = async () => {
+    try {
+      const res = await api.get('/backups/stats/');
+      setBackupStats(res.data);
+    } catch (err) { console.error('Failed to load backup stats', err); }
+  };
+
+  const fetchBackupRecords = async () => {
+    try {
+      const res = await api.get('/backups/records/');
+      setBackupRecords(res.data.results || res.data || []);
+    } catch (err) { console.error('Failed to load backup records', err); }
+  };
+
+  const fetchBackupConfig = async (serviceName) => {
+    try {
+      const res = await api.get(`/backups/config/?service_name=${serviceName}`);
+      setBackupConfigs(prev => ({ ...prev, [serviceName]: res.data }));
+      return res.data;
+    } catch (err) { console.error('Failed to load backup config', err); return null; }
+  };
+
+  const handleTriggerBackup = async (serviceName, includeMedia = false) => {
+    setBackupTriggerLoading(prev => ({ ...prev, [serviceName]: true }));
+    setBackupMsg({ type: '', text: '' });
+    try {
+      const res = await api.post('/backups/trigger/', { service_name: serviceName, include_media: includeMedia });
+      setBackupMsg({ type: 'success', text: `${serviceName === 'library' ? 'Library Functions' : 'Repository'} backup completed successfully! File: ${res.data.file_name}` });
+      fetchBackupRecords();
+      fetchBackupStats();
+    } catch (err) {
+      setBackupMsg({ type: 'error', text: err.response?.data?.error || `Backup failed for ${serviceName}` });
+    } finally {
+      setBackupTriggerLoading(prev => ({ ...prev, [serviceName]: false }));
+    }
+  };
+
+  const handleDeleteBackup = async (recordId, fileName) => {
+    if (!window.confirm(`Delete backup "${fileName}"? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/backups/delete/${recordId}/`);
+      setBackupMsg({ type: 'success', text: `Backup "${fileName}" deleted.` });
+      fetchBackupRecords();
+      fetchBackupStats();
+    } catch (err) {
+      setBackupMsg({ type: 'error', text: 'Failed to delete backup.' });
+    }
+  };
+
+  const openConfigEditor = async (serviceName) => {
+    const config = await fetchBackupConfig(serviceName);
+    if (config) {
+      setBackupConfigForm({ ...config });
+      setBackupConfigEditing(serviceName);
+    }
+  };
+
+  const handleSaveBackupConfig = async () => {
+    setBackupLoading(true);
+    try {
+      await api.put(`/backups/config/?service_name=${backupConfigEditing}`, backupConfigForm);
+      setBackupMsg({ type: 'success', text: `Backup configuration for "${backupConfigEditing}" saved.` });
+      setBackupConfigEditing(null);
+      fetchBackupConfig(backupConfigEditing);
+      fetchBackupStats();
+    } catch (err) {
+      setBackupMsg({ type: 'error', text: err.response?.data?.error || 'Failed to save config.' });
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleDownloadBackup = (recordId) => {
+    window.open(`/api/backups/download/${recordId}/`, '_blank');
+  };
+
+  useEffect(() => {
+    if (activeTab === 'backups') {
+      fetchBackupStats();
+      fetchBackupRecords();
+      fetchBackupConfig('library');
+      fetchBackupConfig('repository');
+    }
+    if (activeTab === 'custom_fields') {
+      fetchCustomFields();
+    }
+  }, [activeTab]);
+
+  // ====== CUSTOM FIELDS FUNCTIONS ======
+  const fetchCustomFields = async () => {
+    try {
+      const res = await api.get('/auth/custom-fields/');
+      setCustomFields(res.data.results || res.data || []);
+    } catch (err) {
+      console.error('Failed to load custom fields', err);
+    }
+  };
+
+  const handleSaveCustomField = async (e) => {
+    e.preventDefault();
+    try {
+      if (isEditingCustomField && customFieldForm.id) {
+        await api.put(`/auth/custom-fields/${customFieldForm.id}/`, customFieldForm);
+        setCustomFieldMsg({ type: 'success', text: 'Custom field updated.' });
+      } else {
+        await api.post('/auth/custom-fields/', customFieldForm);
+        setCustomFieldMsg({ type: 'success', text: 'Custom field created.' });
+      }
+      setCustomFieldForm({ entity_type: 'USER', name: '', field_type: 'TEXT', options: [], is_required: false });
+      setIsEditingCustomField(false);
+      fetchCustomFields();
+    } catch (err) {
+      setCustomFieldMsg({ type: 'error', text: err.response?.data?.detail || 'Failed to save custom field.' });
+    }
+  };
+
+  const handleDeleteCustomField = async (id) => {
+    if (!window.confirm('Delete this custom field? This will not remove existing data but it will hide the field.')) return;
+    try {
+      await api.delete(`/auth/custom-fields/${id}/`);
+      setCustomFieldMsg({ type: 'success', text: 'Custom field deleted.' });
+      fetchCustomFields();
+    } catch (err) {
+      setCustomFieldMsg({ type: 'error', text: 'Failed to delete.' });
+    }
+  };
+
+  const renderCustomFieldsForm = (entityType, formData, setFormData) => {
+    const fields = customFields.filter(f => f.entity_type === entityType);
+    if (fields.length === 0) return null;
+    
+    return (
+      <div className="mt-4 pt-4 border-t border-slate-200">
+        <h4 className="font-bold text-[#670047] mb-3 text-xs uppercase tracking-wider">Dynamic Fields</h4>
+        <div className="grid grid-cols-2 gap-3">
+          {fields.map(field => (
+            <div key={field.name}>
+              <label className="font-bold text-slate-700 block mb-1">
+                {field.name} {field.is_required && <span className="text-rose-500">*</span>}
+              </label>
+              {field.field_type === 'TEXT' && (
+                 <input type="text" className="w-full px-3 py-2 border rounded-lg" required={field.is_required} value={formData.custom_fields?.[field.name] || ''} onChange={e => setFormData({...formData, custom_fields: {...(formData.custom_fields || {}), [field.name]: e.target.value}})} />
+              )}
+              {field.field_type === 'NUMBER' && (
+                 <input type="number" className="w-full px-3 py-2 border rounded-lg" required={field.is_required} value={formData.custom_fields?.[field.name] || ''} onChange={e => setFormData({...formData, custom_fields: {...(formData.custom_fields || {}), [field.name]: e.target.value}})} />
+              )}
+              {field.field_type === 'DATE' && (
+                 <input type="date" className="w-full px-3 py-2 border rounded-lg" required={field.is_required} value={formData.custom_fields?.[field.name] || ''} onChange={e => setFormData({...formData, custom_fields: {...(formData.custom_fields || {}), [field.name]: e.target.value}})} />
+              )}
+              {field.field_type === 'BOOLEAN' && (
+                <label className="flex items-center space-x-2 mt-2">
+                 <input type="checkbox" className="rounded text-[#670047]" checked={formData.custom_fields?.[field.name] === 'true'} onChange={e => setFormData({...formData, custom_fields: {...(formData.custom_fields || {}), [field.name]: e.target.checked ? 'true' : 'false'}})} />
+                 <span className="text-sm">Yes</span>
+                </label>
+              )}
+              {field.field_type === 'DROPDOWN' && (
+                 <select className="w-full px-3 py-2 border rounded-lg bg-white" required={field.is_required} value={formData.custom_fields?.[field.name] || ''} onChange={e => setFormData({...formData, custom_fields: {...(formData.custom_fields || {}), [field.name]: e.target.value}})}>
+                    <option value="">Select Option</option>
+                    {field.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                 </select>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  };
+
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* ID Card Scanner for Patron Registration */}
@@ -452,185 +669,25 @@ export default function AdminDashboardPage() {
         >
           Settle Fines ({unpaidFines.length})
         </button>
+        <button
+          onClick={() => setActiveTab('backups')}
+          className={`py-3 px-4 border-b-2 transition whitespace-nowrap flex items-center space-x-1.5 ${activeTab === 'backups' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
+        >
+          <HardDrive className="w-3.5 h-3.5" />
+          <span>Backups & Recovery</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('custom_fields')}
+          className={`py-3 px-4 border-b-2 transition whitespace-nowrap flex items-center space-x-1.5 ${activeTab === 'custom_fields' ? 'border-[#670047] text-[#670047]' : 'border-transparent text-slate-500'}`}
+        >
+          <Settings2 className="w-3.5 h-3.5" />
+          <span>Custom Fields</span>
+        </button>
       </div>
 
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && metrics && (
-        <div className="space-y-6">
-          {/* Top Metric Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3.5">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Catalog Titles</div>
-              <div className="text-xl font-black text-slate-900 mt-1">{metrics.total_titles}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">{metrics.total_physical_copies} physical copies</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active Loans</div>
-              <div className="text-xl font-black text-emerald-700 mt-1">{metrics.active_loans}</div>
-              <div className="text-[10px] text-rose-600 font-bold mt-0.5">{metrics.overdue_loans} overdue</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                <Flame className="w-3 h-3 text-rose-500" />
-                <span>Total Borrows</span>
-              </div>
-              <div className="text-xl font-black text-[#670047] mt-1">{(metrics.total_cumulative_borrows || 0).toLocaleString()}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Cumulative desk issues</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                <Search className="w-3 h-3 text-blue-500" />
-                <span>Catalog Searches</span>
-              </div>
-              <div className="text-xl font-black text-[#1b3058] mt-1">{(metrics.total_catalog_searches || 0).toLocaleString()}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Student & staff lookups</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                <Bookmark className="w-3 h-3 text-amber-500" />
-                <span>Holds & Queues</span>
-              </div>
-              <div className="text-xl font-black text-amber-700 mt-1">{(metrics.total_cumulative_holds || 0).toLocaleString()}</div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Desk holds & waitlists</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unpaid Fines</div>
-              <div className="text-xl font-black text-rose-700 mt-1">Rs. {metrics.outstanding_fines_rs.toFixed(0)}</div>
-              <div className="text-[10px] text-emerald-600 mt-0.5">Rs. {metrics.collected_fines_rs.toFixed(0)} paid</div>
-            </div>
-
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Research Papers</div>
-              <div className="text-xl font-black text-blue-700 mt-1">{metrics.total_research_papers}</div>
-              <div className="text-[10px] text-amber-600 font-bold mt-0.5">{metrics.pending_papers_for_review} pending</div>
-            </div>
-          </div>
-
-          {/* Book Popularity & Demand Analytics (3 Columns: Most Borrowed, Most Searched, Most on Hold) */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-7 h-7 rounded-lg bg-[#670047] flex items-center justify-center text-[#ffcb00]">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
-                  Academic Book Demand & Circulation Statistics (Koha Core Analytics)
-                </h3>
-              </div>
-              <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full">
-                Top 5 Ranking Per Metric
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
-              {/* Column 1: Most Borrowed */}
-              <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5 text-xs font-bold text-rose-800">
-                    <Flame className="w-4 h-4 text-rose-600" />
-                    <span>🔥 Most Borrowed Titles</span>
-                  </div>
-                  <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold">
-                    Checkouts
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {bookStats.most_borrowed?.slice(0, 5).map((b, idx) => (
-                    <div key={b.id} className="bg-white p-2.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
-                      <div className="flex items-start justify-between gap-1.5">
-                        <span className="font-mono text-[10px] font-bold text-slate-400">#{idx + 1}</span>
-                        <div className="flex-1 font-bold text-slate-900 truncate" title={b.title}>
-                          {b.title}
-                        </div>
-                        <span className="font-black text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded text-[10px] shrink-0">
-                          {b.borrow_count} loans
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1 pl-4">
-                        <span>{b.category_name || 'Academic'}</span>
-                        <span className="text-emerald-700 font-semibold">{b.available_copies_count}/{b.total_copies_count} on shelf</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Column 2: Most Searched */}
-              <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5 text-xs font-bold text-blue-800">
-                    <Search className="w-4 h-4 text-blue-600" />
-                    <span>🔍 Most Searched Titles</span>
-                  </div>
-                  <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
-                    Inquiries
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {bookStats.most_searched?.slice(0, 5).map((b, idx) => (
-                    <div key={b.id} className="bg-white p-2.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
-                      <div className="flex items-start justify-between gap-1.5">
-                        <span className="font-mono text-[10px] font-bold text-slate-400">#{idx + 1}</span>
-                        <div className="flex-1 font-bold text-slate-900 truncate" title={b.title}>
-                          {b.title}
-                        </div>
-                        <span className="font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] shrink-0">
-                          {b.search_count} views
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1 pl-4">
-                        <span>{b.category_name || 'Academic'}</span>
-                        <span className="font-mono text-slate-400">{b.call_number || b.isbn}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Column 3: Most on Hold */}
-              <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-800">
-                    <Bookmark className="w-4 h-4 text-amber-600" />
-                    <span>📌 Most on Hold (Waitlists)</span>
-                  </div>
-                  <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-                    Demand Queue
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {bookStats.most_held?.slice(0, 5).map((b, idx) => (
-                    <div key={b.id} className="bg-white p-2.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
-                      <div className="flex items-start justify-between gap-1.5">
-                        <span className="font-mono text-[10px] font-bold text-slate-400">#{idx + 1}</span>
-                        <div className="flex-1 font-bold text-slate-900 truncate" title={b.title}>
-                          {b.title}
-                        </div>
-                        <span className="font-black text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded text-[10px] shrink-0">
-                          {b.hold_count} holds
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1 pl-4">
-                        <span>{b.category_name || 'Academic'}</span>
-                        <span className={b.available_copies_count > 0 ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold'}>
-                          {b.available_copies_count > 0 ? `${b.available_copies_count} on shelf` : 'All copies loaned'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={<TabLoader />}><OverviewTab metrics={metrics} bookStats={bookStats} /></Suspense>
       )}
 
       {/* TAB: CATALOG & BOOKS MANAGEMENT */}
@@ -990,6 +1047,7 @@ export default function AdminDashboardPage() {
 
       {/* TAB 3: CSV BATCH IMPORT */}
       {activeTab === 'csv_import' && (
+
         <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
           <h2 className="text-base font-bold text-slate-900 mb-1">Batch Patron CSV Onboarding</h2>
           <p className="text-xs text-slate-500 mb-4">
@@ -1331,6 +1389,8 @@ export default function AdminDashboardPage() {
                 </label>
               </div>
 
+              {renderCustomFieldsForm('USER', userFormData, setUserFormData)}
+
               <div className="flex justify-end space-x-2 pt-4 border-t">
                 <button
                   type="button"
@@ -1495,6 +1555,8 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
+              {renderCustomFieldsForm('USER', userFormData, setUserFormData)}
+
               <div className="flex justify-end space-x-2 pt-4 border-t">
                 <button
                   type="button"
@@ -1516,11 +1578,37 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* TAB: BACKUPS & RECOVERY */}
+      {activeTab === 'backups' && (
+        <Suspense fallback={<TabLoader />}><BackupsTab 
+          backupMsg={backupMsg} setBackupMsg={setBackupMsg}
+          backupStats={backupStats} backupConfigs={backupConfigs} backupRecords={backupRecords} backupTriggerLoading={backupTriggerLoading}
+          openConfigEditor={openConfigEditor} handleTriggerBackup={handleTriggerBackup} fetchBackupRecords={fetchBackupRecords}
+          handleDownloadBackup={handleDownloadBackup} handleDeleteBackup={handleDeleteBackup}
+          backupConfigEditing={backupConfigEditing} setBackupConfigEditing={setBackupConfigEditing}
+          backupConfigForm={backupConfigForm} setBackupConfigForm={setBackupConfigForm}
+          handleSaveBackupConfig={handleSaveBackupConfig} backupLoading={backupLoading}
+        /></Suspense>
+      )}
+
+      {/* TAB: CUSTOM FIELDS */}
+      {activeTab === 'custom_fields' && (
+        <Suspense fallback={<TabLoader />}><CustomFieldsTab 
+          customFieldMsg={customFieldMsg}
+          isEditingCustomField={isEditingCustomField} setIsEditingCustomField={setIsEditingCustomField}
+          customFieldForm={customFieldForm} setCustomFieldForm={setCustomFieldForm}
+          handleSaveCustomField={handleSaveCustomField}
+          customFields={customFields}
+          handleDeleteCustomField={handleDeleteCustomField}
+        /></Suspense>
+      )}
+
       {/* Book Form Modal (Add / Edit) */}
       {adminBookModalOpen && (
         <BookFormModal
           book={adminBookToEdit}
           categories={catalogCategories}
+          customFields={customFields.filter(f => f.entity_type === 'BOOK')}
           initialTab={adminBookModalInitialTab}
           onClose={() => {
             setAdminBookModalOpen(false);
@@ -1535,3 +1623,6 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+
+

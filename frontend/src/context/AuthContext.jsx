@@ -25,6 +25,13 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+
+    // Listen for graceful degradation events from the API interceptor
+    const handleExpired = () => {
+      setUser(null);
+    };
+    window.addEventListener('auth:expired', handleExpired);
+    return () => window.removeEventListener('auth:expired', handleExpired);
   }, []);
 
   const login = async (username, password) => {
@@ -57,7 +64,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !!localStorage.getItem('access_token'),
         isStaff,
         isAdmin,
         isLecturer,
@@ -70,3 +77,5 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
+

@@ -46,7 +46,7 @@ const COPY_STATUSES = [
   { value: 'LOST', label: 'Reported Lost' },
 ];
 
-export default function BookFormModal({ book = null, categories = [], initialTab = 'details', onClose, onSuccess }) {
+export default function BookFormModal({ book = null, categories = [], customFields = [], initialTab = 'details', onClose, onSuccess }) {
   const isEdit = Boolean(book);
   const [activeTab, setActiveTab] = useState(isEdit && initialTab === 'copies' ? 'copies' : 'details'); // 'details' | 'copies'
 
@@ -62,6 +62,7 @@ export default function BookFormModal({ book = null, categories = [], initialTab
     publication_year: '',
     edition: '',
     description: '',
+    custom_fields: {},
   });
 
   // Multiple initial physical copies state (For Add Book Mode)
@@ -117,6 +118,7 @@ export default function BookFormModal({ book = null, categories = [], initialTab
         publication_year: book.publication_year ? String(book.publication_year) : '',
         edition: book.edition || '',
         description: book.description || '',
+          custom_fields: book.custom_fields || {},
       });
       fetchBookCopies(book.id);
     }
@@ -1304,3 +1306,5 @@ export default function BookFormModal({ book = null, categories = [], initialTab
     </>
   );
 }
+
+

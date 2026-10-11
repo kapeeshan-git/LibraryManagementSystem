@@ -22,8 +22,18 @@ api.interceptors.request.use(
 );
 
 // Response interceptor to handle token refresh on 401
+// Response interceptor to unwrap standardized backend responses
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // If backend uses the new {success, data, error, message} format, unwrap it
+    if (response.data && typeof response.data === 'object' && 'success' in response.data && 'data' in response.data) {
+      if (response.data.success) {
+        // Transparently return the inner data to existing React components
+        response.data = response.data.data;
+      }
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -52,3 +62,5 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+

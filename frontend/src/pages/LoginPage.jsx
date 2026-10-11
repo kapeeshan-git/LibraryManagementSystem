@@ -120,29 +120,29 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               type="button"
-              onClick={() => handleQuickLogin('librarian', 'Librarian@123')}
+              onClick={() => handleQuickLogin('librarian', 'librarian123')}
               className="p-2 border border-slate-200 rounded-xl bg-slate-50 hover:bg-[#fff0f7] hover:border-[#670047]/40 text-left transition"
             >
               <div className="font-black text-slate-800">Librarian</div>
-              <div className="text-slate-500 text-[10px]">librarian / Librarian@123</div>
+              <div className="text-slate-500 text-[10px]">librarian / librarian123</div>
             </button>
 
             <button
               type="button"
-              onClick={() => handleQuickLogin('admin', 'Admin@123')}
+              onClick={() => handleQuickLogin('admin', 'admin123')}
               className="p-2 border border-slate-200 rounded-xl bg-slate-50 hover:bg-[#fff0f7] hover:border-[#670047]/40 text-left transition"
             >
               <div className="font-black text-slate-800">Admin</div>
-              <div className="text-slate-500 text-[10px]">admin / Admin@123</div>
+              <div className="text-slate-500 text-[10px]">admin / admin123</div>
             </button>
 
             <button
               type="button"
-              onClick={() => handleQuickLogin('lecturer', 'Lecturer@123')}
+              onClick={() => handleQuickLogin('lecturer', 'lecturer123')}
               className="p-2 border border-slate-200 rounded-xl bg-slate-50 hover:bg-[#fff0f7] hover:border-[#670047]/40 text-left transition"
             >
               <div className="font-black text-slate-800">Lecturer</div>
-              <div className="text-slate-500 text-[10px]">lecturer / Lecturer@123</div>
+              <div className="text-slate-500 text-[10px]">lecturer / lecturer123</div>
             </button>
 
             <button

@@ -2,17 +2,28 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/layout/Navbar';
-import HomePage from './pages/HomePage';
-import AboutPage from './pages/AboutPage';
-import ServicesPage from './pages/ServicesPage';
-import EBooksPage from './pages/EBooksPage';
-import PublicationsPage from './pages/PublicationsPage';
-import CatalogPage from './pages/CatalogPage';
-import RepositoryPage from './pages/RepositoryPage';
-import LoginPage from './pages/LoginPage';
-import CirculationDeskPage from './pages/CirculationDeskPage';
-import PatronDashboardPage from './pages/PatronDashboardPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
+import { Suspense, lazy } from 'react';
+
+// Lazy loading heavy page components to reduce initial bundle size
+const HomePage = lazy(() => import('./pages/HomePage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const ServicesPage = lazy(() => import('./pages/ServicesPage'));
+const EBooksPage = lazy(() => import('./pages/EBooksPage'));
+const PublicationsPage = lazy(() => import('./pages/PublicationsPage'));
+const CatalogPage = lazy(() => import('./pages/CatalogPage'));
+const RepositoryPage = lazy(() => import('./pages/RepositoryPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const CirculationDeskPage = lazy(() => import('./pages/CirculationDeskPage'));
+const PatronDashboardPage = lazy(() => import('./pages/PatronDashboardPage'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
+
+// A sleek fallback loading UI while chunks are downloaded
+const PageLoader = () => (
+  <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+    <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#1b3058] border-t-transparent"></div>
+    <p className="text-sm font-medium text-slate-500 animate-pulse">Loading Module...</p>
+  </div>
+);
 
 // Route guards
 const ProtectedRoute = ({ children, staffOnly = false }) => {
@@ -44,7 +55,7 @@ export default function App() {
         <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
           <Navbar />
           <main className="flex-1">
-            <Routes>
+            <Suspense fallback={<PageLoader />}><Routes>
               {/* Home & Information Portals */}
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
@@ -91,7 +102,7 @@ export default function App() {
 
               {/* Fallback to Home */}
               <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            </Routes></Suspense>
           </main>
           
           {/* Authentic University of Vavuniya Academic Footer (Inspired by vau.ac.lk & lib.cmb.ac.lk) */}
@@ -178,3 +189,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+

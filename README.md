@@ -1,2 +1,0 @@
-# LibraryManagementSystem
-IT3162_grup_project_gr_no_12
